@@ -3,9 +3,11 @@
 // Modified for Scalping (M1/M5/M15) - Optimized for XAU & Forex
 //
 // 📊 TRADING STRATEGIES:
-// 1. FIRST TOUCH: Wait for price to enter box → rejection candle → enter when closes outside box
-// 2. BREAK & RETEST: Wait for "Break Res/Sup" label → pullback → diamond (◆) appears → ENTER
-// 3. CONFLUENCE: Trade only when diamond + candlestick pattern + volume confirmation align
+// 1. FIRST TOUCH: Price touches S/R → diamond (◆) appears → rejection candle → ENTER
+// 2. BREAK & RETEST: See "SBR/RBS ⚠" label → wait for pullback → diamond (◆) at retest → ENTER
+//    - RBS: Resistance broken → becomes support → BUY on retest (green ◆ below)
+//    - SBR: Support broken → becomes resistance → SELL on retest (red ◆ above)
+// 3. CONFLUENCE: Best entries when diamond + candlestick pattern + volume confirmation align
 //
 // 💎 ENTRY SIGNALS:
 // - Green ◆ below candle = BUY signal (support holds or broken resistance retested)
@@ -196,40 +198,39 @@ switch
 // ---------------------------------------------------------------------------------------------------------------------}
 // 𝙑𝙄𝙎𝙐𝘼𝙇𝙄𝙕𝘼𝙏𝙄𝙊𝙉
 // ---------------------------------------------------------------------------------------------------------------------{
-// Plot Res and Sup breakouts and holds 
-plotchar(res_holds, "Resistance Holds", "◆", 
-             color = #e92929,   size = size.tiny, location = location.abovebar, offset = -1)
-plotchar(sup_holds, "Support Holds",    "◆", 
-             color = #20ca26, size = size.tiny, location = location.belowbar, offset = -1)
+// Plot Res and Sup breakouts and holds
+plotchar(res_holds, "Resistance Holds", "◆", color=#e92929, size=size.tiny, location=location.abovebar, offset=-1)
+plotchar(sup_holds, "Support Holds", "◆", color=#20ca26, size=size.tiny, location=location.belowbar, offset=-1)
 
-plotchar(brekout_res and res_is_sup[1], "Resistance as Support Holds", "◆", 
-             color = #20ca26, size = size.tiny, location = location.belowbar, offset = -1)
-plotchar(brekout_sup and sup_is_res[1], "Support as Resistance Holds", "◆", 
-             color = #e92929,   size = size.tiny, location = location.abovebar, offset = -1)
+// RETEST SIGNALS - Diamond appears when price retests broken level
+// RBS: Resistance broken (became support) → price pulls back → bounces from old resistance (now support)
+plotchar(res_is_sup and ta.crossover(low, resistanceLevel), "RBS Retest - BUY", "◆", color=#20ca26, size=size.tiny, location=location.belowbar, offset=-1)
+
+// SBR: Support broken (became resistance) → price pulls back → rejected from old support (now resistance)
+plotchar(sup_is_res and ta.crossunder(high, supportLevel), "SBR Retest - SELL", "◆", color=#e92929, size=size.tiny, location=location.abovebar, offset=-1)
 
 // Break Out Labels (SBR/RBS with Orange)
 if brekout_sup and not sup_is_res[1]
-    label.new(
-              bar_index[1], supportLevel[1],
-              text       = "SBR ⚠",
-              style      = label.style_label_down,
-              color      = color.orange,
-              textcolor  = color.white,
-              size       = size.small,
-              tooltip    = "Support Became Resistance"
-              )
+    label.new(bar_index[1], supportLevel[1], text="SBR ⚠", style=label.style_label_down, color=color.orange, textcolor=color.white, size=size.small, tooltip="Support Became Resistance")
 
 if brekout_res and not res_is_sup[1]
-    label.new(
-              bar_index[1], resistanceLevel[1],
-              text       = "RBS ⚠",
-              style      = label.style_label_up,
-              color      = color.orange,
-              textcolor  = color.white,
-              size       = size.small,
-              tooltip    = "Resistance Became Support"
-              )
+    label.new(bar_index[1], resistanceLevel[1], text="RBS ⚠", style=label.style_label_up, color=color.orange, textcolor=color.white, size=size.small, tooltip="Resistance Became Support")
 
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝘼𝙇𝙀𝙍𝙏𝙎 & 𝙏𝙍𝘼𝘿𝙄𝙉𝙂 𝙎𝙄𝙂𝙉𝘼𝙇𝙎
+// ---------------------------------------------------------------------------------------------------------------------{
+
+// BREAK & RETEST ALERTS (Most important for scalping)
+alertcondition(res_is_sup and ta.crossover(low, resistanceLevel), title="RBS RETEST - BUY", message="Resistance became Support - Price retested - BUY Signal!")
+alertcondition(sup_is_res and ta.crossunder(high, supportLevel), title="SBR RETEST - SELL", message="Support became Resistance - Price retested - SELL Signal!")
+
+// First Touch Alerts
+alertcondition(res_holds, title="Resistance First Touch", message="Price rejected at resistance - Potential SELL")
+alertcondition(sup_holds, title="Support First Touch", message="Price bounced at support - Potential BUY")
+
+// Breakout Alerts (Wait for retest!)
+alertcondition(brekout_res, title="Resistance Broken", message="Resistance broken - Wait for pullback and retest for BUY")
+alertcondition(brekout_sup, title="Support Broken", message="Support broken - Wait for pullback and retest for SELL")
 
 // ◆
 // ---------------------------------------------------------------------------------------------------------------------}

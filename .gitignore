@@ -3,3 +3,5 @@
 /backtest_results
 /__pycache__
 *.csv
+.vercel
+.env

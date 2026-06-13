@@ -1,0 +1,179 @@
+//@version=5
+indicator("SR + Webhook Alert [FREE]", overlay=true, max_boxes_count=50)
+
+// === INPUT SETTINGS ===
+int lookbackPeriod = input.int(10, "Lookback Period", minval=1)
+int vol_len = input.int(2, "Volume Filter Length")
+float box_withd = input.float(1.0, "Box Width")
+bool show_alerts = input.bool(true, "Enable Webhook Alerts")
+
+// === S/R LOGIC (dari script original) ===
+upAndDownVolume() =>
+    posVol = 0.0
+    negVol = 0.0
+    var isBuyVolume = true
+    switch
+        close > open   => isBuyVolume := true
+        close < open   => isBuyVolume := false
+    if isBuyVolume
+        posVol += volume
+    else
+        negVol -= volume
+    posVol + negVol
+
+calcSupportResistance(src, lookbackPeriod) =>
+    Vol = upAndDownVolume()
+    vol_hi = ta.highest(Vol/2.5, vol_len)
+    vol_lo = ta.lowest(Vol/2.5, vol_len)
+
+    var float supportLevel = na
+    var float supportLevel_1 = na
+    var float resistanceLevel = na
+    var float resistanceLevel_1 = na
+    var box sup = na
+    var box res = na
+    var color res_color = na
+    var color sup_color = na
+
+    var bool brekout_res = na
+    var bool brekout_sup = na
+    var bool res_holds = na
+    var bool sup_holds = na
+
+    pivotHigh = ta.pivothigh(src, lookbackPeriod, lookbackPeriod)
+    pivotLow = ta.pivotlow(src, lookbackPeriod, lookbackPeriod)
+    atr = ta.atr(200)
+    withd = atr * box_withd
+
+    // Support levels
+    if (not na(pivotLow)) and Vol > vol_hi
+        supportLevel := pivotLow
+        supportLevel_1 := supportLevel-withd
+        topLeft = chart.point.from_index(bar_index-lookbackPeriod, supportLevel)
+        bottomRight = chart.point.from_index(bar_index, supportLevel_1)
+        sup_color := color.from_gradient(Vol, 0, ta.highest(Vol, 25), color(na), color.new(color.green, 30))
+        sup := box.new(topLeft, bottomRight, border_color=color.green, border_width=1, bgcolor=sup_color, text="Vol: "+str.tostring(math.round(Vol,2)), text_color=chart.fg_color, text_size=size.small)
+
+    // Resistance levels
+    if (not na(pivotHigh)) and Vol < vol_lo
+        resistanceLevel := pivotHigh
+        resistanceLevel_1 := resistanceLevel+withd
+        topLeft = chart.point.from_index(bar_index-lookbackPeriod, resistanceLevel)
+        bottomRight = chart.point.from_index(bar_index, resistanceLevel_1)
+        res_color := color.from_gradient(Vol, ta.lowest(Vol, 25), 0, color.new(color.red, 30), color(na))
+        res := box.new(topLeft, bottomRight, border_color=color.red, border_width=1, bgcolor=res_color, text="Vol: "+str.tostring(math.round(Vol,2)), text_color=chart.fg_color, text_size=size.small)
+
+    sup.set_right(bar_index+1)
+    res.set_right(bar_index+1)
+
+    // Breakout conditions
+    brekout_res := ta.crossover(low, resistanceLevel_1)
+    res_holds := ta.crossunder(high, resistanceLevel)
+    sup_holds := ta.crossover(low, supportLevel)
+    brekout_sup := ta.crossunder(high, supportLevel_1)
+
+    // Color changes for broken levels
+    if brekout_sup
+        sup.set_bgcolor(color.new(color.orange, 80))
+        sup.set_border_color(color.orange)
+        sup.set_border_style(line.style_dashed)
+
+    if sup_holds
+        sup.set_bgcolor(sup_color)
+        sup.set_border_color(color.green)
+        sup.set_border_style(line.style_solid)
+
+    if brekout_res
+        res.set_bgcolor(color.new(color.orange, 80))
+        res.set_border_color(color.orange)
+        res.set_border_style(line.style_dashed)
+
+    if res_holds
+        res.set_bgcolor(res_color)
+        res.set_border_color(color.red)
+        res.set_border_style(line.style_solid)
+
+    [supportLevel, resistanceLevel, brekout_res, res_holds, sup_holds, brekout_sup]
+
+[supportLevel, resistanceLevel, brekout_res, res_holds, sup_holds, brekout_sup] = calcSupportResistance(close, lookbackPeriod)
+
+// === ZONE FLIP DETECTION ===
+var bool res_is_sup = na
+var bool sup_is_res = na
+
+switch
+    brekout_res => res_is_sup := true
+    res_holds   => res_is_sup := false
+
+switch
+    brekout_sup => sup_is_res := true
+    sup_holds   => sup_is_res := false
+
+// === VISUAL SIGNALS ===
+plotchar(res_holds, "Resistance Holds", "◆", color=#e92929, size=size.tiny, location=location.abovebar, offset=-1)
+plotchar(sup_holds, "Support Holds", "◆", color=#20ca26, size=size.tiny, location=location.belowbar, offset=-1)
+
+// RETEST SIGNALS
+plotchar(res_is_sup and ta.crossover(low, resistanceLevel), "RBS Retest - BUY", "◆", color=#20ca26, size=size.tiny, location=location.belowbar, offset=-1)
+plotchar(sup_is_res and ta.crossunder(high, supportLevel), "SBR Retest - SELL", "◆", color=#e92929, size=size.tiny, location=location.abovebar, offset=-1)
+
+// Labels for breakouts
+if brekout_sup and not sup_is_res[1]
+    label.new(bar_index[1], supportLevel[1], text="SBR ⚠", style=label.style_label_down, color=color.orange, textcolor=color.white, size=size.small, tooltip="Support Became Resistance")
+
+if brekout_res and not res_is_sup[1]
+    label.new(bar_index[1], resistanceLevel[1], text="RBS ⚠", style=label.style_label_up, color=color.orange, textcolor=color.white, size=size.small, tooltip="Resistance Became Support")
+
+// === WEBHOOK ALERT SYSTEM ===
+var string alertMessage = ""
+var string signalType = ""
+
+// Check all conditions and build message
+if res_is_sup and ta.crossover(low, resistanceLevel)
+    signalType := "BUY"
+    alertMessage := "RBS RETEST - Old resistance now support. Diamond signal confirmed!"
+    alert("BUY:" + syminfo.ticker + "@" + str.tostring(close), alert.freq_once_per_bar_close)
+
+else if sup_is_res and ta.crossunder(high, supportLevel)
+    signalType := "SELL"
+    alertMessage := "SBR RETEST - Old support now resistance. Diamond signal confirmed!"
+    alert("SELL:" + syminfo.ticker + "@" + str.tostring(close), alert.freq_once_per_bar_close)
+
+else if res_holds
+    signalType := "SELL"
+    alertMessage := "Resistance holds - Rejection confirmed"
+
+else if sup_holds
+    signalType := "BUY"
+    alertMessage := "Support holds - Bounce confirmed"
+
+else if brekout_res
+    signalType := "BREAKOUT"
+    alertMessage := "Resistance broken - Wait for retest to BUY"
+
+else if brekout_sup
+    signalType := "BREAKDOWN"
+    alertMessage := "Support broken - Wait for retest to SELL"
+
+// Create webhook JSON message
+webhookData = '{"symbol":"' + syminfo.ticker + '","price":"' + str.tostring(close) + '","action":"' + signalType + '","message":"' + alertMessage + '","timeframe":"' + timeframe.period + '","exchange":"' + syminfo.prefix + '"}'
+
+// SINGLE ALERT for all signals
+alertcondition(
+    signalType != "",
+    title="WEBHOOK SIGNAL",
+    message=webhookData
+)
+
+// Visual feedback
+bgcolor(signalType == "BUY" ? color.new(color.green, 95) : signalType == "SELL" ? color.new(color.red, 95) : na)
+
+// Status table
+var table infoTable = table.new(position.top_right, 2, 3)
+if barstate.islast and show_alerts
+    table.cell(infoTable, 0, 0, "Webhook", text_color=color.white, bgcolor=color.blue)
+    table.cell(infoTable, 1, 0, "ACTIVE", text_color=color.green)
+    table.cell(infoTable, 0, 1, "Last Signal", text_color=color.gray)
+    table.cell(infoTable, 1, 1, signalType != "" ? signalType : "WAITING", text_color=signalType == "BUY" ? color.green : signalType == "SELL" ? color.red : color.gray)
+    table.cell(infoTable, 0, 2, "Price", text_color=color.gray)
+    table.cell(infoTable, 1, 2, str.tostring(close, "#,###.##"), text_color=color.white)

@@ -1,0 +1,57 @@
+// ONE ALERT VERSION - Untuk TradingView Free Account
+// Gabung SEMUA signal dalam 1 alert!
+
+//@version=5
+indicator("SR Fast - FREE Alert Version", shorttitle="SR Free Alert", overlay=true)
+
+// ... [copy semua input dan logic dari script original] ...
+
+// SMART ALERT SYSTEM - 1 Alert untuk SEMUA Signal!
+var string alertType = ""
+var string alertDetail = ""
+
+// Check semua kondisi
+if res_is_sup and ta.crossover(low, resistanceLevel)
+    alertType := "BUY"
+    alertDetail := "RBS RETEST - Resistance became Support"
+    label.new(bar_index, low, "🟢 BUY", style=label.style_label_up, color=color.green, size=size.small)
+
+else if sup_is_res and ta.crossunder(high, supportLevel)
+    alertType := "SELL"
+    alertDetail := "SBR RETEST - Support became Resistance"
+    label.new(bar_index, high, "🔴 SELL", style=label.style_label_down, color=color.red, size=size.small)
+
+else if res_holds
+    alertType := "SELL"
+    alertDetail := "Resistance Hold - Rejection Signal"
+
+else if sup_holds
+    alertType := "BUY"
+    alertDetail := "Support Hold - Bounce Signal"
+
+else if brekout_res
+    alertType := "BREAKOUT"
+    alertDetail := "Resistance Broken - Wait for Retest"
+
+else if brekout_sup
+    alertType := "BREAKDOWN"
+    alertDetail := "Support Broken - Wait for Retest"
+
+// Create JSON message for webhook
+webhookMessage = '{"symbol":"' + syminfo.ticker + '","price":"' + str.tostring(close) + '","action":"' + alertType + '","message":"' + alertDetail + '","timeframe":"' + timeframe.period + '"}'
+
+// SATU ALERT UNTUK SEMUANYA!
+alertcondition(
+    alertType != "",
+    title="UNIVERSAL SIGNAL",
+    message=webhookMessage
+)
+
+// Visual feedback
+bgcolor(alertType == "BUY" ? color.new(color.green, 90) : alertType == "SELL" ? color.new(color.red, 90) : na)
+
+// Display current status
+var table statusTable = table.new(position.top_right, 2, 1)
+if barstate.islast
+    table.cell(statusTable, 0, 0, "Last Signal: " + alertType + " - " + alertDetail,
+               text_color=alertType == "BUY" ? color.green : alertType == "SELL" ? color.red : color.gray)
