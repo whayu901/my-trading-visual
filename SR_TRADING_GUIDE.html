@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Support & Resistance Trading Guide - Complete</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1e3c72;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+        }
+
+        .zone-section {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border-left: 5px solid #1e3c72;
+        }
+
+        .zone-box {
+            display: inline-block;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin: 10px;
+            font-weight: bold;
+            font-size: 1.1em;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .zone-green {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+            border: 3px solid #3d8b1f;
+        }
+
+        .zone-red {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+            border: 3px solid #c71f2f;
+        }
+
+        .zone-orange {
+            background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+            color: #333;
+            border: 3px solid #e67e00;
+        }
+
+        .strategy-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #f7971e;
+        }
+
+        .strategy-card h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .entry-signal {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #0284c7;
+        }
+
+        .buy-signal {
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+        }
+
+        .sell-signal {
+            background: #fef2f2;
+            border-left: 4px solid #dc2626;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #f59e0b;
+        }
+
+        .warning-box strong {
+            color: #92400e;
+        }
+
+        .steps {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .steps ol {
+            margin-left: 20px;
+        }
+
+        .steps li {
+            margin: 10px 0;
+            font-size: 1.05em;
+        }
+
+        .example-box {
+            background: #1e293b;
+            color: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .diamond {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .diamond-green {
+            color: #22c55e;
+        }
+
+        .diamond-red {
+            color: #ef4444;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th {
+            background: #1e3c72;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .highlight {
+            background: #fef08a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Support & Resistance Trading Guide</h1>
+        <p class="subtitle">Panduan Lengkap Trading dengan Zona S/R dan SBR/RBS</p>
+
+        <!-- ZONA WARNA -->
+        <div class="zone-section">
+            <h2 style="margin-bottom: 20px;">🎨 Penjelasan Zona Warna</h2>
+
+            <div class="zone-box zone-green">
+                🟢 ZONA HIJAU = SUPPORT
+            </div>
+            <p style="margin: 10px; font-size: 1.05em;">
+                Zona support aktif (belum pernah di-break). Harga biasanya <strong>bounce/naik</strong> saat menyentuh zona ini.
+            </p>
+
+            <div class="zone-box zone-red">
+                🔴 ZONA MERAH = RESISTANCE
+            </div>
+            <p style="margin: 10px; font-size: 1.05em;">
+                Zona resistance aktif (belum pernah di-break). Harga biasanya <strong>reject/turun</strong> saat menyentuh zona ini.
+            </p>
+
+            <div class="zone-box zone-orange">
+                🟠 ZONA ORANGE = SBR/RBS (FLIPPED)
+            </div>
+            <p style="margin: 10px; font-size: 1.05em;">
+                Zona yang sudah <strong>di-break dan flip fungsi</strong>:
+            </p>
+            <ul style="margin-left: 40px; margin-top: 10px;">
+                <li><strong>SBR ⚠</strong> = Support Became Resistance (support jadi resistance)</li>
+                <li><strong>RBS ⚠</strong> = Resistance Became Support (resistance jadi support)</li>
+            </ul>
+        </div>
+
+        <!-- STRATEGI 1: FIRST TOUCH -->
+        <div class="strategy-card">
+            <h3>🎯 STRATEGI #1: FIRST TOUCH (Sentuhan Pertama)</h3>
+            <p><strong>Konsep:</strong> Entry saat harga pertama kali menyentuh zona S/R dan terjadi rejection</p>
+
+            <div class="entry-signal buy-signal">
+                <h4>✅ BUY SIGNAL (Entry Long)</h4>
+                <div class="steps">
+                    <ol>
+                        <li>Harga turun dan masuk ke <span class="highlight">ZONA HIJAU (Support)</span></li>
+                        <li>Tunggu muncul <strong>rejection candle</strong> (candle dengan wick panjang ke bawah)</li>
+                        <li>Candle close <strong>DI ATAS zona support</strong></li>
+                        <li>Muncul <strong class="diamond diamond-green">◆ hijau</strong> di bawah candle</li>
+                        <li><strong>ENTRY BUY</strong> di candle berikutnya</li>
+                    </ol>
+                </div>
+
+                <div class="example-box">
+                    Contoh:<br>
+                    Zona Support: 4,180.00 - 4,175.00<br>
+                    Harga turun ke 4,176.50 (masuk zona)<br>
+                    Candle close di 4,181.20 (keluar zona ke atas)<br>
+                    Diamond hijau ◆ muncul → <strong style="color: #22c55e;">ENTRY BUY!</strong><br><br>
+
+                    📍 Stop Loss: 4,174.00 (di bawah zona support - buffer 1-2 pips)<br>
+                    📍 Take Profit: Zona resistance berikutnya ATAU 1:2 RR minimum
+                </div>
+            </div>
+
+            <div class="entry-signal sell-signal">
+                <h4>❌ SELL SIGNAL (Entry Short)</h4>
+                <div class="steps">
+                    <ol>
+                        <li>Harga naik dan masuk ke <span class="highlight">ZONA MERAH (Resistance)</span></li>
+                        <li>Tunggu muncul <strong>rejection candle</strong> (candle dengan wick panjang ke atas)</li>
+                        <li>Candle close <strong>DI BAWAH zona resistance</strong></li>
+                        <li>Muncul <strong class="diamond diamond-red">◆ merah</strong> di atas candle</li>
+                        <li><strong>ENTRY SELL</strong> di candle berikutnya</li>
+                    </ol>
+                </div>
+
+                <div class="example-box">
+                    Contoh:<br>
+                    Zona Resistance: 4,220.00 - 4,225.00<br>
+                    Harga naik ke 4,223.80 (masuk zona)<br>
+                    Candle close di 4,218.50 (keluar zona ke bawah)<br>
+                    Diamond merah ◆ muncul → <strong style="color: #ef4444;">ENTRY SELL!</strong><br><br>
+
+                    📍 Stop Loss: 4,226.00 (di atas zona resistance + buffer 1-2 pips)<br>
+                    📍 Take Profit: Zona support berikutnya ATAU 1:2 RR minimum
+                </div>
+            </div>
+        </div>
+
+        <!-- STRATEGI 2: BREAK & RETEST -->
+        <div class="strategy-card">
+            <h3>🎯 STRATEGI #2: BREAK & RETEST (Zone Flip)</h3>
+            <p><strong>Konsep:</strong> Entry saat zona di-break, lalu harga pullback untuk retest zona yang sudah flip</p>
+
+            <div class="warning-box">
+                <strong>⚠️ PENTING:</strong> Strategi ini butuh <strong>konfirmasi</strong> lebih kuat! Tunggu label <strong>SBR ⚠</strong> atau <strong>RBS ⚠</strong> muncul, lalu tunggu pullback dan diamond signal.
+            </div>
+
+            <div class="entry-signal buy-signal">
+                <h4>✅ BUY SIGNAL (RBS - Resistance Became Support)</h4>
+                <div class="steps">
+                    <ol>
+                        <li>Harga <strong>break zona merah (resistance)</strong> ke atas</li>
+                        <li>Label <strong style="color: #f7971e;">"RBS ⚠"</strong> muncul (zona berubah jadi orange)</li>
+                        <li>Harga <strong>pullback turun</strong> kembali ke zona orange</li>
+                        <li>Muncul <strong class="diamond diamond-green">◆ hijau</strong> (retest berhasil, zona hold sebagai support baru)</li>
+                        <li><strong>ENTRY BUY</strong> → target continuation ke atas</li>
+                    </ol>
+                </div>
+
+                <div class="example-box">
+                    Contoh RBS:<br>
+                    1. Zona Resistance (merah): 4,200.00 - 4,205.00<br>
+                    2. Harga break ke atas → close 4,207.50<br>
+                    3. Label "RBS ⚠" muncul → zona jadi <strong style="color: #f7971e;">ORANGE</strong><br>
+                    4. Harga pullback turun ke 4,203.00 (test zona orange)<br>
+                    5. Diamond hijau ◆ muncul → <strong style="color: #22c55e;">ENTRY BUY!</strong><br><br>
+
+                    📍 Stop Loss: 4,198.00 (di bawah zona orange)<br>
+                    📍 Take Profit: Target arah bullish continuation
+                </div>
+            </div>
+
+            <div class="entry-signal sell-signal">
+                <h4>❌ SELL SIGNAL (SBR - Support Became Resistance)</h4>
+                <div class="steps">
+                    <ol>
+                        <li>Harga <strong>break zona hijau (support)</strong> ke bawah</li>
+                        <li>Label <strong style="color: #f7971e;">"SBR ⚠"</strong> muncul (zona berubah jadi orange)</li>
+                        <li>Harga <strong>pullback naik</strong> kembali ke zona orange</li>
+                        <li>Muncul <strong class="diamond diamond-red">◆ merah</strong> (retest berhasil, zona hold sebagai resistance baru)</li>
+                        <li><strong>ENTRY SELL</strong> → target continuation ke bawah</li>
+                    </ol>
+                </div>
+
+                <div class="example-box">
+                    Contoh SBR:<br>
+                    1. Zona Support (hijau): 4,160.00 - 4,155.00<br>
+                    2. Harga break ke bawah → close 4,153.20<br>
+                    3. Label "SBR ⚠" muncul → zona jadi <strong style="color: #f7971e;">ORANGE</strong><br>
+                    4. Harga pullback naik ke 4,157.80 (test zona orange)<br>
+                    5. Diamond merah ◆ muncul → <strong style="color: #ef4444;">ENTRY SELL!</strong><br><br>
+
+                    📍 Stop Loss: 4,162.00 (di atas zona orange)<br>
+                    📍 Take Profit: Target arah bearish continuation
+                </div>
+            </div>
+        </div>
+
+        <!-- DIAMOND SIGNALS -->
+        <div class="zone-section">
+            <h2 style="margin-bottom: 20px;">💎 Arti Diamond Signals (◆)</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Signal</th>
+                        <th>Posisi</th>
+                        <th>Arti</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong class="diamond diamond-green">◆ Hijau</strong></td>
+                        <td>Di bawah candle</td>
+                        <td>Support hold ATAU resistance break & retest</td>
+                        <td><strong style="color: #16a34a;">ENTRY BUY</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong class="diamond diamond-red">◆ Merah</strong></td>
+                        <td>Di atas candle</td>
+                        <td>Resistance hold ATAU support break & retest</td>
+                        <td><strong style="color: #dc2626;">ENTRY SELL</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- RISK MANAGEMENT -->
+        <div class="strategy-card">
+            <h3>📏 RISK MANAGEMENT (Wajib!)</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Cara Setting</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Stop Loss (SL)</strong></td>
+                        <td>
+                            • BUY: Di bawah zona support/orange + buffer 5-10 pips<br>
+                            • SELL: Di atas zona resistance/orange + buffer 5-10 pips
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Take Profit (TP)</strong></td>
+                        <td>
+                            • Target 1: Zona S/R berikutnya<br>
+                            • Target 2: Minimum RR 1:2 (kalau SL 10 pips, TP min 20 pips)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Risk per Trade</strong></td>
+                        <td>
+                            • Maksimal <strong>1-2%</strong> dari capital per trade<br>
+                            • Jangan over-leverage!
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Partial TP</strong></td>
+                        <td>
+                            • Close 50% posisi di TP1 (1:1.5 RR)<br>
+                            • Trailing stop 50% sisanya ke TP2 (1:3 RR)
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TIPS & TRICKS -->
+        <div class="warning-box">
+            <h3 style="margin-bottom: 15px;">💡 Tips & Tricks Pro</h3>
+            <ol style="margin-left: 20px;">
+                <li><strong>Hindari trading saat major news:</strong> NFP, FOMC, CPI → volatilitas tinggi, zona bisa langsung tembus</li>
+                <li><strong>Konfirmasi multi-timeframe:</strong> Cek zona di M15 & H1 untuk konfirmasi zona kuat</li>
+                <li><strong>Volume confirmation:</strong> Zona dengan volume tinggi ("Vol: xxxxx") lebih reliable</li>
+                <li><strong>Jangan FOMO:</strong> Tunggu diamond signal, jangan entry asal!</li>
+                <li><strong>Zona orange = hati-hati:</strong> SBR/RBS zone butuh konfirmasi lebih kuat (tunggu diamond!)</li>
+                <li><strong>Best timeframe:</strong> M5 untuk scalping, M15 untuk intraday, H1 untuk swing</li>
+                <li><strong>Trailing stop:</strong> Setelah profit 1:1, geser SL ke breakeven</li>
+            </ol>
+        </div>
+
+        <!-- QUICK CHECKLIST -->
+        <div class="strategy-card">
+            <h3>✅ Quick Entry Checklist</h3>
+
+            <div style="background: #f0f9ff; padding: 20px; border-radius: 10px; margin-top: 15px;">
+                <h4 style="color: #0284c7; margin-bottom: 10px;">Sebelum Entry, Pastikan:</h4>
+                <ul style="margin-left: 20px; font-size: 1.05em;">
+                    <li>☑️ Harga sudah touch zona S/R (hijau/merah) ATAU zona flip (orange)</li>
+                    <li>☑️ Ada rejection candle (wick panjang)</li>
+                    <li>☑️ Candle close di luar zona (untuk first touch) ATAU di dalam zona (untuk retest)</li>
+                    <li>☑️ <strong>Diamond signal ◆ sudah muncul</strong></li>
+                    <li>☑️ SL & TP sudah di-set</li>
+                    <li>☑️ Risk maksimal 1-2% dari capital</li>
+                    <li>☑️ Tidak ada major news dalam 30 menit ke depan</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>📊 Support & Resistance Indicator - Scalping Optimized</strong></p>
+            <p>Backtested Win Rate: 42% | Profit Factor: 1.18 | Average 5-7 signals/day</p>
+            <p style="margin-top: 10px; color: #999; font-size: 0.9em;">
+                Disclaimer: Trading involves risk. Past performance is not indicative of future results.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

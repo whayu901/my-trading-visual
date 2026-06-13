@@ -11,6 +11,10 @@
 // - Green ◆ below candle = BUY signal (support holds or broken resistance retested)
 // - Red ◆ above candle = SELL signal (resistance holds or broken support retested)
 //
+// 🟠 ZONE FLIP (SBR/RBS):
+// - Orange zone with "SBR ⚠" = Support Became Resistance (zone flipped - be careful!)
+// - Orange zone with "RBS ⚠" = Resistance Became Support (zone flipped - wait for retest)
+//
 // 📏 RISK MANAGEMENT:
 // - Stop Loss: Beyond box edge + 5-10 pip buffer
 // - Take Profit: Next S/R zone OR minimum 1:2 RR
@@ -142,10 +146,10 @@ calcSupportResistance(src, lookbackPeriod) =>
     sup_holds   := ta.crossover(low, supportLevel)
     brekout_sup := ta.crossunder(high, supportLevel_1)
 
-    // Change Color of Support to red if it was break, change color of resistance to green if it was break
+    // Change Color of Support to ORANGE if it was break (SBR - Support Became Resistance)
     if brekout_sup
-        sup.set_bgcolor(color.new(color.red, 80))
-        sup.set_border_color(color.red)
+        sup.set_bgcolor(color.new(color.orange, 80))
+        sup.set_border_color(color.orange)
         sup.set_border_style(line.style_dashed)
 
     if sup_holds
@@ -153,9 +157,10 @@ calcSupportResistance(src, lookbackPeriod) =>
         sup.set_border_color(color.green)
         sup.set_border_style(line.style_solid)
 
+    // Change color of resistance to ORANGE if it was break (RBS - Resistance Became Support)
     if brekout_res
-        res.set_bgcolor(color.new(color.green, 80))
-        res.set_border_color(color.new(color.green, 0))
+        res.set_bgcolor(color.new(color.orange, 80))
+        res.set_border_color(color.orange)
         res.set_border_style(line.style_dashed)
 
     if res_holds
@@ -202,25 +207,27 @@ plotchar(brekout_res and res_is_sup[1], "Resistance as Support Holds", "◆",
 plotchar(brekout_sup and sup_is_res[1], "Support as Resistance Holds", "◆", 
              color = #e92929,   size = size.tiny, location = location.abovebar, offset = -1)
 
-// Break Out Labels
+// Break Out Labels (SBR/RBS with Orange)
 if brekout_sup and not sup_is_res[1]
     label.new(
-              bar_index[1], supportLevel[1], 
-              text       = "Break Sup", 
-              style      = label.style_label_down, 
-              color      = #7e1e1e, 
-              textcolor  = chart.fg_color, 
-              size       = size.small
+              bar_index[1], supportLevel[1],
+              text       = "SBR ⚠",
+              style      = label.style_label_down,
+              color      = color.orange,
+              textcolor  = color.white,
+              size       = size.small,
+              tooltip    = "Support Became Resistance"
               )
 
 if brekout_res and not res_is_sup[1]
     label.new(
-              bar_index[1], resistanceLevel[1], 
-              text       = "Break Res", 
-              style      = label.style_label_up, 
-              color      = #2b6d2d, 
-              textcolor  = chart.fg_color, 
-              size       = size.small
+              bar_index[1], resistanceLevel[1],
+              text       = "RBS ⚠",
+              style      = label.style_label_up,
+              color      = color.orange,
+              textcolor  = color.white,
+              size       = size.small,
+              tooltip    = "Resistance Became Support"
               )
 
 

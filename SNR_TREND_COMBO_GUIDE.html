@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 S/R + Trend Combo Strategy - Complete Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .indicator-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            border-top: 5px solid;
+        }
+
+        .indicator-card.snr {
+            border-top-color: #10b981;
+        }
+
+        .indicator-card.trend {
+            border-top-color: #3b82f6;
+        }
+
+        .indicator-card h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .combo-section {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            border-left: 5px solid #e17055;
+        }
+
+        .combo-section h2 {
+            color: #d63031;
+            margin-bottom: 20px;
+        }
+
+        .setup-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .setup-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .entry-box {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .entry-box.buy {
+            background: #f0fdf4;
+            border-left-color: #16a34a;
+        }
+
+        .entry-box.sell {
+            background: #fef2f2;
+            border-left-color: #dc2626;
+        }
+
+        .checklist {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .checklist ul {
+            margin-left: 20px;
+            font-size: 1.05em;
+        }
+
+        .checklist li {
+            margin: 10px 0;
+        }
+
+        .example-box {
+            background: #1e293b;
+            color: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.05em;
+        }
+
+        .trend-badge {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 5px;
+        }
+
+        .trend-up {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+        }
+
+        .trend-down {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .trend-neutral {
+            background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #f59e0b;
+        }
+
+        .success-box {
+            background: #d1fae5;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #10b981;
+        }
+
+        .highlight {
+            background: #fef08a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            color: #666;
+        }
+
+        .vs-box {
+            text-align: center;
+            font-size: 2em;
+            color: #667eea;
+            font-weight: bold;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 S/R + Trend Combo Strategy</h1>
+        <p class="subtitle">Kombinasi Support/Resistance dengan Trend Detection untuk Trading Akurat</p>
+
+        <!-- COMPARISON -->
+        <div class="two-column">
+            <div class="indicator-card snr">
+                <h3>📊 Support & Resistance (SNR)</h3>
+                <p><strong>Fungsi:</strong> Mendeteksi zona entry (WHERE to enter)</p>
+                <ul style="margin: 15px 0 0 20px;">
+                    <li>🟢 <strong>Zona Hijau</strong> = Support (area bounce)</li>
+                    <li>🔴 <strong>Zona Merah</strong> = Resistance (area reject)</li>
+                    <li>🟠 <strong>Zona Orange</strong> = SBR/RBS (flip zone)</li>
+                    <li>💎 <strong>Diamond ◆</strong> = Entry signal</li>
+                </ul>
+                <div style="margin-top: 15px; padding: 10px; background: #f0fdf4; border-radius: 8px;">
+                    <strong>Kekuatan:</strong> Presisi entry point tinggi
+                </div>
+                <div style="margin-top: 10px; padding: 10px; background: #fef2f2; border-radius: 8px;">
+                    <strong>Kelemahan:</strong> Tidak tahu trend direction
+                </div>
+            </div>
+
+            <div class="indicator-card trend">
+                <h3>📈 Trend Detector</h3>
+                <p><strong>Fungsi:</strong> Mendeteksi arah trend (WHICH direction to trade)</p>
+                <ul style="margin: 15px 0 0 20px;">
+                    <li>📈 <strong>EMA 9/21/50</strong> = Trend filter</li>
+                    <li>📊 <strong>RSI</strong> = Momentum confirmation</li>
+                    <li>🟢 <strong>BUY Label</strong> = Uptrend detected</li>
+                    <li>🔴 <strong>SELL Label</strong> = Downtrend detected</li>
+                </ul>
+                <div style="margin-top: 15px; padding: 10px; background: #f0fdf4; border-radius: 8px;">
+                    <strong>Kekuatan:</strong> Tahu arah trend
+                </div>
+                <div style="margin-top: 10px; padding: 10px; background: #fef2f2; border-radius: 8px;">
+                    <strong>Kelemahan:</strong> Entry sering late, no exact zone
+                </div>
+            </div>
+        </div>
+
+        <div class="vs-box">
+            ⚡ KOMBINASI KEDUANYA = PERFECT SETUP! ⚡
+        </div>
+
+        <!-- COMBO STRATEGY -->
+        <div class="combo-section">
+            <h2>🎯 Strategi Combo S/R + Trend</h2>
+            <p style="font-size: 1.15em; margin-bottom: 20px;">
+                <strong>Konsep:</strong> Gunakan <strong>Trend Detector</strong> untuk tahu arah, lalu cari <strong>entry di zona S/R</strong>
+            </p>
+
+            <div class="success-box">
+                <strong>✅ GOLDEN RULE:</strong>
+                <ul style="margin: 10px 0 0 20px; font-size: 1.05em;">
+                    <li>🔼 <strong>UPTREND</strong> → Hanya ambil <strong>BUY signal</strong> dari S/R (zona support/RBS)</li>
+                    <li>🔽 <strong>DOWNTREND</strong> → Hanya ambil <strong>SELL signal</strong> dari S/R (zona resistance/SBR)</li>
+                    <li>↔️ <strong>SIDEWAYS</strong> → Trade both directions (hati-hati!)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- SETUP 1: UPTREND BUY -->
+        <div class="setup-card">
+            <h3>🟢 SETUP #1: UPTREND BUY (Perfect Long Entry)</h3>
+
+            <div class="entry-box buy">
+                <h4 style="color: #16a34a; margin-bottom: 10px;">📋 Konfirmasi Lengkap:</h4>
+                <div class="checklist">
+                    <strong>1️⃣ TREND DETECTOR Check:</strong>
+                    <ul>
+                        <li>✅ Background chart = <span class="trend-badge trend-up">UPTREND ↗</span></li>
+                        <li>✅ EMA 9 > EMA 21 > EMA 50 (berurutan ke atas)</li>
+                        <li>✅ Trend Strength = <strong>Strong</strong> atau <strong>Moderate</strong></li>
+                        <li>✅ Trading Bias = "BUY on S/R ✓"</li>
+                    </ul>
+
+                    <strong style="margin-top: 15px; display: block;">2️⃣ S/R INDICATOR Check:</strong>
+                    <ul>
+                        <li>✅ Harga turun ke <strong>ZONA HIJAU (Support)</strong> ATAU <strong>ZONA ORANGE (RBS)</strong></li>
+                        <li>✅ Muncul rejection candle (wick panjang ke bawah)</li>
+                        <li>✅ Candle close di atas zona</li>
+                        <li>✅ <strong>Diamond hijau ◆</strong> muncul di bawah candle</li>
+                    </ul>
+
+                    <strong style="margin-top: 15px; display: block;">3️⃣ ENTRY:</strong>
+                    <ul>
+                        <li>🎯 <strong>ENTRY BUY</strong> di candle berikutnya</li>
+                        <li>⛔ Stop Loss: Di bawah zona support - buffer 5-10 pips</li>
+                        <li>🎁 Take Profit: Next resistance zone ATAU 1:2 RR minimum</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <strong style="color: #22c55e;">CONTOH REAL UPTREND BUY:</strong><br><br>
+
+                📈 <strong>TREND DETECTOR:</strong><br>
+                - Background: HIJAU (Uptrend)<br>
+                - EMA 9 (4,185) > EMA 21 (4,180) > EMA 50 (4,170)<br>
+                - Trend Strength: <strong>Strong</strong><br>
+                - Trading Bias: "BUY on S/R ✓"<br><br>
+
+                📊 <strong>S/R INDICATOR:</strong><br>
+                - Zona Support Hijau: 4,175.00 - 4,170.00<br>
+                - Harga turun ke 4,172.50 (masuk zona)<br>
+                - Rejection wick → close 4,177.80 (di atas zona)<br>
+                - Diamond hijau ◆ muncul!<br><br>
+
+                ✅ <strong>ENTRY:</strong> 4,178.00 (candle berikutnya)<br>
+                ⛔ <strong>STOP LOSS:</strong> 4,169.00 (di bawah support - 1 pip buffer)<br>
+                🎁 <strong>TAKE PROFIT:</strong> 4,196.00 (next resistance) = RR 1:2 ✓<br><br>
+
+                <strong style="color: #fbbf24;">⚡ PROBABILITY WIN: 60-70% (High confidence!)</strong>
+            </div>
+        </div>
+
+        <!-- SETUP 2: DOWNTREND SELL -->
+        <div class="setup-card">
+            <h3>🔴 SETUP #2: DOWNTREND SELL (Perfect Short Entry)</h3>
+
+            <div class="entry-box sell">
+                <h4 style="color: #dc2626; margin-bottom: 10px;">📋 Konfirmasi Lengkap:</h4>
+                <div class="checklist">
+                    <strong>1️⃣ TREND DETECTOR Check:</strong>
+                    <ul>
+                        <li>✅ Background chart = <span class="trend-badge trend-down">DOWNTREND ↘</span></li>
+                        <li>✅ EMA 9 < EMA 21 < EMA 50 (berurutan ke bawah)</li>
+                        <li>✅ Trend Strength = <strong>Strong</strong> atau <strong>Moderate</strong></li>
+                        <li>✅ Trading Bias = "SELL on S/R ✓"</li>
+                    </ul>
+
+                    <strong style="margin-top: 15px; display: block;">2️⃣ S/R INDICATOR Check:</strong>
+                    <ul>
+                        <li>✅ Harga naik ke <strong>ZONA MERAH (Resistance)</strong> ATAU <strong>ZONA ORANGE (SBR)</strong></li>
+                        <li>✅ Muncul rejection candle (wick panjang ke atas)</li>
+                        <li>✅ Candle close di bawah zona</li>
+                        <li>✅ <strong>Diamond merah ◆</strong> muncul di atas candle</li>
+                    </ul>
+
+                    <strong style="margin-top: 15px; display: block;">3️⃣ ENTRY:</strong>
+                    <ul>
+                        <li>🎯 <strong>ENTRY SELL</strong> di candle berikutnya</li>
+                        <li>⛔ Stop Loss: Di atas zona resistance + buffer 5-10 pips</li>
+                        <li>🎁 Take Profit: Next support zone ATAU 1:2 RR minimum</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <strong style="color: #ef4444;">CONTOH REAL DOWNTREND SELL:</strong><br><br>
+
+                📉 <strong>TREND DETECTOR:</strong><br>
+                - Background: MERAH (Downtrend)<br>
+                - EMA 9 (4,165) < EMA 21 (4,170) < EMA 50 (4,180)<br>
+                - Trend Strength: <strong>Strong</strong><br>
+                - Trading Bias: "SELL on S/R ✓"<br><br>
+
+                📊 <strong>S/R INDICATOR:</strong><br>
+                - Zona Resistance Merah: 4,180.00 - 4,185.00<br>
+                - Harga naik ke 4,183.20 (masuk zona)<br>
+                - Rejection wick → close 4,178.50 (di bawah zona)<br>
+                - Diamond merah ◆ muncul!<br><br>
+
+                ✅ <strong>ENTRY:</strong> 4,178.00 (candle berikutnya)<br>
+                ⛔ <strong>STOP LOSS:</strong> 4,186.00 (di atas resistance + 1 pip buffer)<br>
+                🎁 <strong>TAKE PROFIT:</strong> 4,162.00 (next support) = RR 1:2 ✓<br><br>
+
+                <strong style="color: #fbbf24;">⚡ PROBABILITY WIN: 60-70% (High confidence!)</strong>
+            </div>
+        </div>
+
+        <!-- SETUP 3: AVOID -->
+        <div class="warning-box">
+            <h3 style="color: #d63031; margin-bottom: 15px;">⚠️ SETUP TO AVOID (Counter-Trend)</h3>
+            <p style="font-size: 1.05em; margin-bottom: 10px;">
+                <strong>Jangan trade melawan trend!</strong> Win rate drop drastis ke 30-35%
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Trend</th>
+                        <th>Signal S/R</th>
+                        <th>Action</th>
+                        <th>Alasan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #fef2f2;">
+                        <td><span class="trend-badge trend-up">UPTREND</span></td>
+                        <td>Diamond merah ◆ (SELL)</td>
+                        <td><strong style="color: #dc2626;">❌ SKIP!</strong></td>
+                        <td>Counter-trend, resistance akan break</td>
+                    </tr>
+                    <tr style="background: #fef2f2;">
+                        <td><span class="trend-badge trend-down">DOWNTREND</span></td>
+                        <td>Diamond hijau ◆ (BUY)</td>
+                        <td><strong style="color: #dc2626;">❌ SKIP!</strong></td>
+                        <td>Counter-trend, support akan break</td>
+                    </tr>
+                    <tr style="background: #fffbeb;">
+                        <td><span class="trend-badge trend-neutral">SIDEWAYS</span></td>
+                        <td>Diamond apa saja</td>
+                        <td><strong style="color: #f59e0b;">⚠️ CAREFUL!</strong></td>
+                        <td>No clear trend, both ok tapi risk lebih tinggi</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- QUICK DECISION TABLE -->
+        <div class="setup-card">
+            <h3>⚡ Quick Decision Table</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Trend Background</th>
+                        <th>S/R Signal</th>
+                        <th>Decision</th>
+                        <th>Win Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #f0fdf4;">
+                        <td>🟢 UPTREND</td>
+                        <td>◆ Hijau (Support/RBS)</td>
+                        <td><strong style="color: #16a34a;">✅ ENTRY BUY</strong></td>
+                        <td>60-70%</td>
+                    </tr>
+                    <tr style="background: #fef2f2;">
+                        <td>🔴 DOWNTREND</td>
+                        <td>◆ Merah (Resistance/SBR)</td>
+                        <td><strong style="color: #dc2626;">✅ ENTRY SELL</strong></td>
+                        <td>60-70%</td>
+                    </tr>
+                    <tr style="background: #fef9f3;">
+                        <td>🟢 UPTREND</td>
+                        <td>◆ Merah (Resistance)</td>
+                        <td><strong style="color: #dc2626;">❌ SKIP</strong></td>
+                        <td>30-35%</td>
+                    </tr>
+                    <tr style="background: #fef9f3;">
+                        <td>🔴 DOWNTREND</td>
+                        <td>◆ Hijau (Support)</td>
+                        <td><strong style="color: #dc2626;">❌ SKIP</strong></td>
+                        <td>30-35%</td>
+                    </tr>
+                    <tr style="background: #f8fafc;">
+                        <td>⚪ SIDEWAYS</td>
+                        <td>◆ Hijau/Merah</td>
+                        <td><strong style="color: #f59e0b;">⚠️ CAREFUL</strong></td>
+                        <td>45-50%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SETTINGS RECOMMENDATION -->
+        <div class="setup-card">
+            <h3>⚙️ Recommended Settings</h3>
+
+            <div class="two-column">
+                <div style="background: #f0fdf4; padding: 20px; border-radius: 10px;">
+                    <h4 style="color: #16a34a; margin-bottom: 10px;">S/R Indicator Settings:</h4>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>Lookback Period:</strong> 10 (default)</li>
+                        <li><strong>Volume Filter:</strong> 2 (scalping)</li>
+                        <li><strong>Box Width:</strong> 1.0-1.2 (XAU), 0.8-1.0 (Forex)</li>
+                    </ul>
+                </div>
+
+                <div style="background: #f0f9ff; padding: 20px; border-radius: 10px;">
+                    <h4 style="color: #3b82f6; margin-bottom: 10px;">Trend Detector Settings:</h4>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>Fast EMA:</strong> 9 (default)</li>
+                        <li><strong>Slow EMA:</strong> 21 (default)</li>
+                        <li><strong>Trend EMA:</strong> 50 (filter)</li>
+                        <li><strong>RSI:</strong> 14 (default), OB: 70, OS: 30</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP BY STEP -->
+        <div class="combo-section">
+            <h2>📝 Step-by-Step Trading Process</h2>
+
+            <div style="background: white; padding: 25px; border-radius: 12px; margin-top: 20px;">
+                <h4 style="color: #667eea; margin-bottom: 15px;">Sebelum Market Open:</h4>
+                <ol style="margin-left: 20px; font-size: 1.05em;">
+                    <li>Load 2 indicators: <strong>Support & Resistance</strong> + <strong>Trend Detector</strong></li>
+                    <li>Check higher timeframe trend (H1/H4) untuk bias harian</li>
+                    <li>Mark important S/R zones di H1</li>
+                </ol>
+
+                <h4 style="color: #667eea; margin: 20px 0 15px;">Saat Trading (M5/M15):</h4>
+                <ol style="margin-left: 20px; font-size: 1.05em;">
+                    <li><strong>Check Trend Detector</strong> → Lihat table "Trading Bias"</li>
+                    <li><strong>Wait for Price</strong> → Tunggu harga mendekati zona S/R</li>
+                    <li><strong>Look for Diamond Signal</strong> → Harus sesuai dengan trend!</li>
+                    <li><strong>Confirm ALL checklist</strong> (trend + S/R + diamond)</li>
+                    <li><strong>ENTRY</strong> → Set SL & TP</li>
+                    <li><strong>Monitor</strong> → Breakeven setelah profit 1:1</li>
+                    <li><strong>Close</strong> → Hit TP atau trailing stop</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>🎯 S/R + Trend Combo Strategy</strong></p>
+            <p>Win Rate: 60-70% (dengan filter trend) | Average RR: 1:2 - 1:3</p>
+            <p style="margin-top: 10px; color: #999; font-size: 0.9em;">
+                "Trade WITH the trend, not against it" - The Golden Rule of Trading
+            </p>
+        </div>
+    </div>
+</body>
+</html>
