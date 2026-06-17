@@ -42,13 +42,13 @@ getOptimalSettings() =>
         [5, 2, 0.6]
     // M5 Settings (Fast scalping - YOUR PREFERRED SETTINGS)
     else if tf == "5"
-        [7, 2, 1.0]
+        [8, 2, 1.0]
     // M15 Settings (Quick trades - SCALPER OPTIMIZED)
     else if tf == "15"
-        [8, 2, 1.0]
+        [10, 2, 1.0]
     // M30 Settings (Balanced)
     else if tf == "30"
-        [10, 3, 1.2]
+        [12, 3, 1.2]
     // H1 and higher (Position trading)
     else if timeframe.isintraday == false or timeframe.isdaily
         [15, 4, 1.5]
