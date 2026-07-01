@@ -1,0 +1,155 @@
+//@version=6
+indicator("GOD MODE - ULTIMATE WIN MAX + SL/TP ALERTS", overlay=true, max_labels_count=500)
+
+// --- PALET WARNA LUXURY ---
+colorDiamond = #00E5FF
+colorGold    = #FFD700
+colorBlack   = #121212
+colorMint    = #00FF88
+colorRed     = #FF0000 
+colorWhite   = #FFFFFF
+colorBlue    = #007BFF
+
+// --- INPUT SETTINGS ---
+fastLen    = input.int(7, "Signal Speed", group="Engine Settings")
+slowLen    = input.int(14, "Signal Strength", group="Engine Settings")
+trailPower = input.float(1.5, "Profit Protection (ATR)", step=0.1, group="Engine Settings")
+
+// --- INPUT SL/TP SETTINGS (NEW) ---
+atrMultSL  = input.float(1.5, "Stop Loss ATR Multiplier", step=0.1, group="Risk Management")
+rrRatio    = input.float(1.5, "Risk:Reward Ratio", step=0.1, group="Risk Management")
+
+// --- LOGIKA SESI (Disesuaikan ke WIB - GMT+7) ---
+is_asia   = not na(time(timeframe.period, "0700-1500:1234567", "GMT+7"))
+is_london = not na(time(timeframe.period, "1500-2300:1234567", "GMT+7"))
+is_ny     = not na(time(timeframe.period, "2000-0400:1234567", "GMT+7"))
+current_session = is_ny ? "NEW YORK" : is_london ? "LONDON" : is_asia ? "ASIA" : "OFF-MARKET"
+
+// --- ENGINE PERHITUNGAN ---
+hmaFast = ta.hma(close, fastLen)
+hmaSlow = ta.hma(close, slowLen)
+rsiVal  = ta.rsi(close, 14)
+atr     = ta.atr(14)
+ema200  = ta.ema(close, 200)
+
+// --- LOGIKA SINYAL ---
+buySignal  = ta.crossover(hmaFast, hmaSlow) and rsiVal > 45
+sellSignal = ta.crossunder(hmaFast, hmaSlow) and rsiVal < 55
+
+// --- SISTEM PELACAK PROFIT & SL/TP ---
+var float entryPrice = 0.0
+var int tradeDir = 0
+var float peakPrice = 0.0
+var float slLevel = 0.0
+var float tpLevel = 0.0
+
+// --- VARIABEL PROYEKSI (BOX) ---
+var box boxTP = na
+var box boxSL = na
+
+if (buySignal and tradeDir <= 0)
+    tradeDir   := 1
+    entryPrice := close
+    peakPrice  := high
+    slLevel    := close - (atr * atrMultSL)
+    tpLevel    := close + ((close - (close - (atr * atrMultSL))) * rrRatio)
+    // Buat Proyeksi Baru (Long)
+    boxTP := box.new(left=bar_index, top=tpLevel, right=bar_index, bottom=entryPrice, border_color=na, bgcolor=color.new(colorMint, 80))
+    boxSL := box.new(left=bar_index, top=entryPrice, right=bar_index, bottom=slLevel, border_color=na, bgcolor=color.new(colorRed, 80))
+    
+else if (sellSignal and tradeDir >= 0)
+    tradeDir   := -1
+    entryPrice := close
+    peakPrice  := low
+    slLevel    := close + (atr * atrMultSL)
+    tpLevel    := close - (( (close + (atr * atrMultSL)) - close) * rrRatio)
+    // Buat Proyeksi Baru (Short)
+    boxTP := box.new(left=bar_index, top=entryPrice, right=bar_index, bottom=tpLevel, border_color=na, bgcolor=color.new(colorMint, 80))
+    boxSL := box.new(left=bar_index, top=slLevel, right=bar_index, bottom=entryPrice, border_color=na, bgcolor=color.new(colorRed, 80))
+
+// Perpanjang box selama posisi aktif
+if tradeDir != 0
+    box.set_right(boxTP, bar_index + 5)
+    box.set_right(boxSL, bar_index + 5)
+
+if (tradeDir == 1)
+    peakPrice := math.max(peakPrice, high)
+else if (tradeDir == -1)
+    peakPrice := math.min(peakPrice, low)
+
+// --- LOGIKA EXIT (HIT SL/TP ATAU TRAILING) ---
+exitBuy  = tradeDir == 1 and (close < peakPrice - (atr * trailPower) or low <= slLevel or high >= tpLevel)
+exitSell = tradeDir == -1 and (close > peakPrice + (atr * trailPower) or high >= slLevel or low <= tpLevel)
+
+if (exitBuy or exitSell)
+    tradeDir := 0
+
+// --- LOGIKA CONCLUSION ---
+string conclusion = "WAITING"
+color conclusionColor = colorGold
+
+if (tradeDir == 1)
+    conclusion := "STRONG BUY"
+    conclusionColor := colorMint
+else if (tradeDir == -1)
+    conclusion := "STRONG SELL"
+    conclusionColor := colorRed
+else if (rsiVal > 60)
+    conclusion := "OVERBOUGHT"
+    conclusionColor := color.orange
+else if (rsiVal < 40)
+    conclusion := "OVERSOLD"
+    conclusionColor := color.aqua
+else
+    conclusion := "SIDEWAYS"
+    conclusionColor := colorWhite
+
+// --- DASHBOARD UI ---
+var table board = table.new(position.top_right, 2, 7, bgcolor=color.new(colorBlack, 20), border_color=colorDiamond, border_width=2)
+
+if barstate.islast
+    table.cell(board, 0, 0, "💎 GOD MODE MAX", text_color=colorDiamond, text_size=size.small)
+    table.cell(board, 1, 0, syminfo.ticker, text_color=colorGold, text_size=size.tiny)
+    
+    table.cell(board, 0, 1, "SIGNAL STATUS", text_color=colorWhite)
+    table.cell(board, 1, 1, (tradeDir == 1 ? "BULLISH" : (tradeDir == -1 ? "BEARISH" : "SCANNING")), text_color=(tradeDir == 1 ? colorMint : (tradeDir == -1 ? colorRed : colorGold)))
+    
+    table.cell(board, 0, 2, "LIVE PIPS", text_color=colorWhite)
+    pips = tradeDir != 0 ? (math.abs(close - entryPrice) / syminfo.mintick) / 10 : 0
+    table.cell(board, 1, 2, str.tostring(math.round(pips, 1)), text_color=colorGold)
+
+    table.cell(board, 0, 3, "SL LEVEL", text_color=color.new(colorRed, 30))
+    table.cell(board, 1, 3, tradeDir != 0 ? str.tostring(slLevel, "#.#####") : "-", text_color=colorWhite)
+
+    table.cell(board, 0, 4, "TP LEVEL", text_color=color.new(colorMint, 30))
+    table.cell(board, 1, 4, tradeDir != 0 ? str.tostring(tpLevel, "#.#####") : "-", text_color=colorWhite)
+
+    table.cell(board, 0, 5, "CONCLUSION", text_color=colorWhite)
+    table.cell(board, 1, 5, conclusion, text_color=conclusionColor)
+    
+    table.cell(board, 0, 6, "VERSI", text_color=color.gray)
+    table.cell(board, 1, 6, "6.1-SL/TP PRO", text_color=color.gray)
+
+// --- VISUALISASI ---
+plot(ema200, color=color.new(colorWhite, 80), title="Major Trend")
+plot(hmaFast, color=colorDiamond, linewidth=2, title="Fast Line")
+plot(hmaSlow, color=colorRed, linewidth=1, title="Slow Line")
+
+// Plot SL/TP Lines (Hanya muncul saat trade aktif)
+plot(tradeDir != 0 ? slLevel : na, "Stop Loss", color=color.new(colorRed, 40), style=plot.style_linebr, linewidth=2)
+plot(tradeDir != 0 ? tpLevel : na, "Take Profit", color=color.new(colorMint, 40), style=plot.style_linebr, linewidth=2)
+
+plotshape(buySignal, "BUY", shape.labelup, location.belowbar, colorMint, text="💎\nBUY", textcolor=colorBlack, size=size.small)
+plotshape(sellSignal, "SELL", shape.labeldown, location.abovebar, colorRed, text="💎\nSELL", textcolor=colorWhite, size=size.small)
+
+plotshape(exitBuy, "EXIT BUY", shape.labeldown, location.abovebar, colorGold, text="EXIT AREA BUY", textcolor=colorBlack, size=size.tiny)
+plotshape(exitSell, "EXIT SELL", shape.labelup, location.belowbar, colorGold, text="EXIT AREA SELL", textcolor=colorBlack, size=size.tiny)
+
+bgcolor(tradeDir == 1 ? color.new(colorMint, 96) : tradeDir == -1 ? color.new(colorRed, 96) : na)
+
+// --- NOTIFIKASI ---
+if buySignal
+    alert("🚀 BUY: " + syminfo.ticker + "\nEntry: " + str.tostring(close) + "\nSL: " + str.tostring(close - (atr * atrMultSL)) + "\nTP: " + str.tostring(close + ((close - (close - (atr * atrMultSL))) * rrRatio)), alert.freq_once_per_bar_close)
+
+if sellSignal
+    alert("🔥 SELL: " + syminfo.ticker + "\nEntry: " + str.tostring(close) + "\nSL: " + str.tostring(close + (atr * atrMultSL)) + "\nTP: " + str.tostring(close - (( (close + (atr * atrMultSL)) - close) * rrRatio)), alert.freq_once_per_bar_close)

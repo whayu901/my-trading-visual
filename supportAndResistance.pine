@@ -2,6 +2,29 @@
 // © ChartPrime
 // Modified for Scalping (M1/M5/M15) - Optimized for XAU & Forex
 //
+// ⚠️ CRITICAL MULTI-TIMEFRAME RULES (MUST READ):
+// ==================================================
+// 🎯 THE GOLDEN RULE: "M15 DECIDES, M5 EXECUTES"
+//
+// ❌ NEVER trade M5 diamonds alone - 70% are FAKE!
+// ✅ ALWAYS check M15 first - this is where institutions operate
+//
+// 📊 PROPER TRADING WORKFLOW:
+// 1. START on M15 → Find diamond at S/R (this is your BIAS)
+// 2. SWITCH to M5 → Wait for retest of M15 level (this is your ENTRY)
+// 3. EXECUTE on M5 → Enter on rejection candle with tight stop
+//
+// 🔍 WHY THIS WORKS:
+// • M15 diamonds = Institutional levels (banks, funds)
+// • M5 diamonds alone = Retail noise (stop hunts, fakeouts)
+// • M15 structure + M5 entry = Professional edge
+//
+// ⏰ TIMING RULES:
+// • Best entries: Within 30-45 min of M15 diamond
+// • After 1 hour: Level often exhausted, skip
+// • First retest: Highest win rate
+// • Third retest: Usually breaks
+//
 // 📊 TRADING STRATEGIES:
 // 1. FIRST TOUCH: Price touches S/R → diamond (◆) appears → rejection candle → ENTER
 // 2. BREAK & RETEST: See "SBR/RBS ⚠" label → wait for pullback → diamond (◆) at retest → ENTER
@@ -16,6 +39,13 @@
 // 🟠 ZONE FLIP (SBR/RBS):
 // - Orange zone with "SBR ⚠" = Support Became Resistance (zone flipped - be careful!)
 // - Orange zone with "RBS ⚠" = Resistance Became Support (zone flipped - wait for retest)
+//
+// 📈 SIMPLE EXECUTION CHECKLIST:
+// ☐ M15 diamond appeared? (Your reason to trade)
+// ☐ Price returned to level on M5? (Your entry zone)
+// ☐ Rejection candle formed? (Your trigger)
+// ☐ Risk:Reward > 1:2? (Your edge)
+// If all ✓ → EXECUTE. If any ✗ → SKIP.
 //
 // 📏 RISK MANAGEMENT:
 // - Stop Loss: Beyond box edge + 5-10 pip buffer
@@ -77,15 +107,19 @@ float assetMultiplier = isGold ? 1.2 : 1.0
 box_withd := box_withd * assetMultiplier
 
 // Display current settings info
-var table infoTable = table.new(position.top_right, 2, 3)
+var table infoTable = table.new(position.top_right, 2, 4)
 if barstate.islast
     currentTF = timeframe.period
     modeText = autoSettings ? "🔄 AUTO" : "🔧 MANUAL"
     assetText = isGold ? "🟨 GOLD" : "💱 " + syminfo.ticker
 
+    // Add warning for M5-only trading
+    warningText = currentTF == "5" ? "⚠️ CHECK M15 FIRST!" : currentTF == "15" ? "✅ GOOD TF" : "TF: " + currentTF
+    warningColor = currentTF == "5" ? color.new(color.red, 30) : currentTF == "15" ? color.new(color.green, 30) : color.new(color.gray, 70)
+
     // Header
     table.cell(infoTable, 0, 0, modeText, text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size.small)
-    table.cell(infoTable, 1, 0, "TF: " + currentTF, text_color=color.white, bgcolor=color.new(color.gray, 70), text_size=size.small)
+    table.cell(infoTable, 1, 0, warningText, text_color=color.white, bgcolor=warningColor, text_size=size.small)
 
     // Settings display
     table.cell(infoTable, 0, 1, "Lookback: " + str.tostring(lookbackPeriod), text_color=color.white, bgcolor=color.new(color.black, 80), text_size=size.tiny)
@@ -94,6 +128,12 @@ if barstate.islast
     // Box width and asset
     table.cell(infoTable, 0, 2, "Box: " + str.tostring(box_withd, "#.#"), text_color=color.white, bgcolor=color.new(color.black, 80), text_size=size.tiny)
     table.cell(infoTable, 1, 2, assetText, text_color=color.white, bgcolor=color.new(color.black, 80), text_size=size.tiny)
+
+    // Trading rule reminder
+    ruleText = currentTF == "5" ? "M15→M5 ONLY" : currentTF == "15" ? "FIND BIAS HERE" : ""
+    if ruleText != ""
+        table.cell(infoTable, 0, 3, ruleText, text_color=color.white, bgcolor=color.new(color.purple, 70), text_size=size.tiny)
+        table.cell(infoTable, 1, 3, "🎯", text_color=color.white, bgcolor=color.new(color.purple, 70), text_size=size.tiny)
 
 
 // ---------------------------------------------------------------------------------------------------------------------}
