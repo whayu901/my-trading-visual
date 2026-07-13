@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entry Playbook — SnR + SVP</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2b3444;
+    --txt:#e6edf3; --muted:#8b98a9; --green:#20ca26; --red:#e92929;
+    --blue:#3b82f6; --purple:#a855f7; --orange:#f59e0b; --gold:#ffd447;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;padding:32px 16px}
+  .wrap{max-width:860px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 24px;font-size:14px}
+  h2{font-size:19px;margin:30px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+  .principle{background:linear-gradient(135deg,#1c2330,#161b22);border-left:4px solid var(--gold)}
+  .principle b{color:var(--gold)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700}
+  .buy{background:rgba(32,202,38,.15);color:var(--green)}
+  .sell{background:rgba(233,41,41,.15);color:var(--red)}
+  .flip{background:rgba(245,158,11,.15);color:var(--orange)}
+  .poc{background:rgba(168,85,247,.15);color:var(--purple)}
+  .steps{list-style:none;padding:0;margin:0;counter-reset:s}
+  .steps li{position:relative;padding:16px 16px 16px 60px;margin:10px 0;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:14px;top:14px;
+    width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:800;color:#fff}
+  .steps li.m15::before{content:"M15";font-size:11px;background:var(--green)}
+  .steps li.m5::before{content:"M5";font-size:12px;background:var(--blue)}
+  .steps li.m1::before{content:"M1";font-size:12px;background:var(--purple)}
+  .steps h3{margin:0 0 4px;font-size:15px}
+  .steps p{margin:0;color:var(--muted);font-size:14px}
+  .check{list-style:none;padding:0;margin:0}
+  .check li{padding:7px 0 7px 30px;position:relative;font-size:14.5px}
+  .check li::before{content:"☐";position:absolute;left:0;font-size:16px}
+  .col2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grade{border-radius:10px;padding:14px 16px}
+  .gA{background:rgba(32,202,38,.1);border:1px solid rgba(32,202,38,.4)}
+  .gB{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4)}
+  .gC{background:rgba(233,41,41,.1);border:1px solid rgba(233,41,41,.4)}
+  .grade b{font-size:15px}
+  .sltp{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center}
+  .sltp div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .sltp .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .sltp .v{font-size:15px;font-weight:700;margin-top:4px}
+  .note{background:rgba(59,130,246,.08);border-left:4px solid var(--blue);border-radius:8px;padding:12px 16px;font-size:14px;color:#cdd9e5}
+  .footer{color:var(--muted);font-size:12px;text-align:center;margin-top:36px}
+  code{background:var(--panel2);padding:1px 6px;border-radius:5px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>🎯 Entry Playbook — SnR + SVP</h1>
+  <p class="sub">Scalping XAU · USDJPY · EURUSD · GBPUSD · Sesi malam (mulai 19:00 WIB) · Workflow M15 → M5 → M1</p>
+
+  <div class="card principle">
+    <b>PRINSIP INTI:</b> <b style="color:var(--green)">SnR</b> = <b>DI MANA</b> harga bereaksi (zona + diamond ◆).
+    <b style="color:var(--purple)">SVP</b> = <b>SEBERAPA VALID</b> level itu (POC/VAH/VAL).
+    Entry terbaik = <b>dua-duanya menunjuk harga yang sama</b> (confluence).
+  </div>
+
+  <h2>📊 Peta Sinyal</h2>
+  <div class="card" style="padding:6px 20px">
+  <table>
+    <tr><th>Indikator</th><th>Elemen</th><th>Arti</th></tr>
+    <tr><td>SnR</td><td>Box hijau + ◆ hijau (bawah)</td><td><span class="tag buy">Support hold → bias BUY</span></td></tr>
+    <tr><td>SnR</td><td>Box merah + ◆ merah (atas)</td><td><span class="tag sell">Resistance hold → bias SELL</span></td></tr>
+    <tr><td>SnR</td><td>Zona oranye <code>RBS ⚠</code></td><td><span class="tag flip">Resistance jebol → jadi support → BUY saat retest</span></td></tr>
+    <tr><td>SnR</td><td>Zona oranye <code>SBR ⚠</code></td><td><span class="tag flip">Support jebol → jadi resistance → SELL saat retest</span></td></tr>
+    <tr><td>SVP</td><td><b>VAL / pVAL</b></td><td><span class="tag buy">Batas bawah value area → area BUY</span></td></tr>
+    <tr><td>SVP</td><td><b>VAH / pVAH</b></td><td><span class="tag sell">Batas atas value area → area SELL</span></td></tr>
+    <tr><td>SVP</td><td><b>POC / pPOC</b></td><td><span class="tag poc">Magnet harga → target TP / area balik arah</span></td></tr>
+  </table>
+  </div>
+  <p class="sub" style="margin-top:6px">Prefix <b>p</b> = level dari sesi sebelumnya (prior-day), mis. <code>pPOC</code> = naked POC kemarin.</p>
+
+  <h2>🪜 Alur Eksekusi</h2>
+  <ul class="steps">
+    <li class="m15">
+      <h3>BIAS 🧭 — tentukan arah</h3>
+      <p>Lihat zona SnR utama + posisi harga terhadap POC & prior-day (pPOC/pVAH/pVAL).
+         Harga di atas value area & mantul support = <b>bias BUY</b>. Di bawah & tolak resistance = <b>bias SELL</b>.
+         Bias tidak jelas → <b>SKIP</b>.</p>
+    </li>
+    <li class="m5">
+      <h3>TREND 📈 — konfirmasi arah</h3>
+      <p>Struktur searah bias M15 (higher-low untuk buy / lower-high untuk sell).
+         Pastikan ada <b>zona SnR M5 yang nyambung dengan level SVP</b> (VAL/VAH/POC). Ini yang menaikkan kelas setup.</p>
+    </li>
+    <li class="m1">
+      <h3>ENTRY 🎯 — eksekusi presisi</h3>
+      <p>Tunggu harga <b>retest</b> level confluence tadi. Trigger = <b>◆ diamond muncul</b> + candle rejection (pin/engulf).
+         Masuk saat candle trigger close.</p>
+    </li>
+  </ul>
+
+  <h2>✅ Checklist Entry</h2>
+  <div class="col2">
+    <div class="card">
+      <b class="tag buy" style="font-size:14px">CHECKLIST BUY</b>
+      <ul class="check" style="margin-top:10px">
+        <li>M15 bias bullish (di atas / mantul VAL–support)</li>
+        <li>Confluence: box support SnR ≈ VAL / pVAL / pPOC</li>
+        <li>M1: ◆ hijau + candle rejection</li>
+        <li>RR minimal 1:2 ke target (POC / VAH berikutnya)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <b class="tag sell" style="font-size:14px">CHECKLIST SELL</b>
+      <ul class="check" style="margin-top:10px">
+        <li>M15 bias bearish (di bawah / tolak VAH–resistance)</li>
+        <li>Confluence: box resistance SnR ≈ VAH / pVAH / pPOC</li>
+        <li>M1: ◆ merah + candle rejection</li>
+        <li>RR minimal 1:2 ke target (POC / VAL berikutnya)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>🛡️ Stop Loss & Take Profit</h2>
+  <div class="card">
+    <div class="sltp">
+      <div><div class="k">Stop Loss</div><div class="v">Di luar box SnR + buffer 5–10 pip</div></div>
+      <div><div class="k">TP1</div><div class="v">POC (magnet)</div></div>
+      <div><div class="k">TP2</div><div class="v">VAH/VAL seberang atau SnR berikutnya</div></div>
+    </div>
+    <p class="sub" style="margin:12px 0 0">Pakai <b>tabel ATR</b> di SVP untuk ukur buffer SL. XAU zonanya sudah auto +20% lebih lebar.</p>
+  </div>
+
+  <h2>🏅 Kualitas Setup</h2>
+  <div class="grade gA"><b>Grade A — size normal</b> · SnR diamond <b>+</b> level SVP <b>+</b> searah bias M15. → yang diburu.</div>
+  <div class="grade gB" style="margin-top:10px"><b>Grade B — size kecil</b> · diamond ada tapi SVP netral.</div>
+  <div class="grade gC" style="margin-top:10px"><b>Grade C — SKIP</b> · diamond M5/M1 sendirian, tanpa SVP & tanpa bias M15 → ±70% fake.</div>
+
+  <h2>⏰ Timing</h2>
+  <div class="card">
+    <ul class="check" style="list-style:disc;padding-left:20px">
+      <li style="padding-left:0">Sesi malam mulai 19:00 WIB (≈ London sore / NY) — likuiditas bagus untuk XAU & major pairs.</li>
+      <li style="padding-left:0">Entry terbaik <b>30–45 menit</b> setelah level M15 terbentuk.</li>
+      <li style="padding-left:0">Retest <b>pertama</b> = win-rate tertinggi. Retest <b>ketiga</b> biasanya jebol.</li>
+    </ul>
+  </div>
+
+  <div class="note">
+    💡 <b>Catatan free-plan:</b> slot indikator (2) sudah dipakai SnR + SVP, jadi konfirmasi EMA200/RSI
+    (dari <code>strategy-rules.md</code>) untuk sekarang = cek manual/mata. Bisa ditempel EMA200 kecil
+    ke salah satu script nanti tanpa menambah indikator.
+  </div>
+
+  <p class="footer">Entry Playbook · dibuat untuk workflow scalping pribadi · SnR (SR Fast 7,2,1) + SVP (POC/VAH/VAL)</p>
+
+</div>
+</body>
+</html>

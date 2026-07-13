@@ -113,9 +113,9 @@ if barstate.islast
     modeText = autoSettings ? "🔄 AUTO" : "🔧 MANUAL"
     assetText = isGold ? "🟨 GOLD" : "💱 " + syminfo.ticker
 
-    // Add warning for M5-only trading
-    warningText = currentTF == "5" ? "⚠️ CHECK M15 FIRST!" : currentTF == "15" ? "✅ GOOD TF" : "TF: " + currentTF
-    warningColor = currentTF == "5" ? color.new(color.red, 30) : currentTF == "15" ? color.new(color.green, 30) : color.new(color.gray, 70)
+    // TF role in workflow: M15 = BIAS, M5 = TREND, M1 = ENTRY
+    warningText = currentTF == "15" ? "① BIAS TF" : currentTF == "5" ? "② TREND TF" : currentTF == "1" ? "③ ENTRY TF" : "TF: " + currentTF
+    warningColor = currentTF == "15" ? color.new(color.green, 30) : currentTF == "5" ? color.new(color.blue, 30) : currentTF == "1" ? color.new(color.purple, 30) : color.new(color.gray, 70)
 
     // Header
     table.cell(infoTable, 0, 0, modeText, text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size.small)
@@ -129,11 +129,12 @@ if barstate.islast
     table.cell(infoTable, 0, 2, "Box: " + str.tostring(box_withd, "#.#"), text_color=color.white, bgcolor=color.new(color.black, 80), text_size=size.tiny)
     table.cell(infoTable, 1, 2, assetText, text_color=color.white, bgcolor=color.new(color.black, 80), text_size=size.tiny)
 
-    // Trading rule reminder
-    ruleText = currentTF == "5" ? "M15→M5 ONLY" : currentTF == "15" ? "FIND BIAS HERE" : ""
+    // Trading rule reminder (M15 bias → M5 trend → M1 execution)
+    ruleText = currentTF == "15" ? "FIND BIAS" : currentTF == "5" ? "CONFIRM TREND" : currentTF == "1" ? "EXECUTE HERE" : ""
+    emojiText = currentTF == "15" ? "🧭" : currentTF == "5" ? "📈" : currentTF == "1" ? "🎯" : ""
     if ruleText != ""
         table.cell(infoTable, 0, 3, ruleText, text_color=color.white, bgcolor=color.new(color.purple, 70), text_size=size.tiny)
-        table.cell(infoTable, 1, 3, "🎯", text_color=color.white, bgcolor=color.new(color.purple, 70), text_size=size.tiny)
+        table.cell(infoTable, 1, 3, emojiText, text_color=color.white, bgcolor=color.new(color.purple, 70), text_size=size.tiny)
 
 
 // ---------------------------------------------------------------------------------------------------------------------}

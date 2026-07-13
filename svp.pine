@@ -1,0 +1,563 @@
+//@version=6
+indicator("SVP + candle + Max volume [midst]", overlay=true, max_bars_back=5000, max_lines_count=500, max_boxes_count=500, max_labels_count=100)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// INPUTS
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Positioning
+globalOffset = input.int(20, "Global Offset", minval=0, maxval=200, group="Positioning", tooltip="Moves both candle and profile together")
+
+// Sessions
+sessionInput = input.session("0930-1600", "Custom Session", group="Sessions")
+sessionType = input.string("All", "Sessions", options=["All", "Custom"], group="Sessions")
+
+// Volume Profile
+valueAreaVolume = input.int(70, "Value Area Volume %", minval=1, maxval=100, group="Volume Profile")
+numRows = input.int(200, "Number of Rows", minval=50, maxval=500, group="Volume Profile")
+showVolumeProfile = input.bool(true, "Show Volume Profile", group="Volume Profile")
+profileWidth = input.int(30, "Profile Width %", minval=1, maxval=100, group="Volume Profile")
+profilePlacement = input.string("Right", "Profile Placement", options=["Left", "Right"], group="Volume Profile")
+profileOffset = input.int(10, "Profile Offset", minval=0, maxval=100, group="Volume Profile", tooltip="Additional offset for profile only")
+volumeBarThickness = input.int(1, "Volume Bar Thickness", minval=1, maxval=10, group="Volume Profile")
+
+// Volume Profile Colors
+upVolumeColor = input.color(color.new(color.teal, 30), "Up Volume", group="Volume Profile Colors")
+downVolumeColor = input.color(color.new(color.fuchsia, 30), "Down Volume", group="Volume Profile Colors")
+valueAreaUpColor = input.color(color.new(color.teal, 50), "Value Area Up", group="Volume Profile Colors")
+valueAreaDownColor = input.color(color.new(color.fuchsia, 50), "Value Area Down", group="Volume Profile Colors")
+
+// POC & Value Area
+showPOC = input.bool(true, "Show POC", group="POC & Value Area")
+pocColor = input.color(color.new(color.fuchsia, 0), "POC Color", inline="POC", group="POC & Value Area")
+pocWidth = input.int(2, "Width", minval=1, maxval=5, inline="POC", group="POC & Value Area")
+vahValLineWidth = input.int(1, "VAH/VAL Line Width", minval=1, maxval=5, group="POC & Value Area")
+extendPOCRight = input.bool(false, "Extend POC Right", group="POC & Value Area")
+extendVAHRight = input.bool(false, "Extend VAH Right", group="POC & Value Area")
+extendVALRight = input.bool(false, "Extend VAL Right", group="POC & Value Area")
+
+// Previous Session Levels
+showPrevLevels   = input.bool(true, "Show Previous Session POC/VAH/VAL", group="Previous Session Levels", tooltip="Tampilkan level POC/VAH/VAL dari sesi-sesi SEBELUMNYA sebagai referensi confluence dengan S/R. Prior-day POC (naked POC) sering jadi magnet harga.")
+numPrevSessions  = input.int(1, "Number of Previous Sessions", minval=1, maxval=5, group="Previous Session Levels", tooltip="Berapa sesi ke belakang yang ditampilkan. 1 = kemarin saja.")
+extendPrevRight  = input.bool(true, "Extend Levels Right", group="Previous Session Levels")
+prevPocColor     = input.color(color.new(color.orange, 0), "Prev POC Color", group="Previous Session Levels")
+prevVaColor      = input.color(color.new(color.blue, 20), "Prev VAH/VAL Color", group="Previous Session Levels")
+prevLineWidth    = input.int(1, "Prev Line Width", minval=1, maxval=4, group="Previous Session Levels")
+showPrevLabels   = input.bool(true, "Show Prev Labels", group="Previous Session Levels")
+
+// Labels
+showLabelsOnPrice = input.bool(true, "Show Labels on Price Scale", group="Labels")
+labelPosition = input.string("Right", "Label Position", options=["Left", "Right"], group="Labels")
+labelOffset = input.int(5, "Label Offset", minval=0, maxval=50, group="Labels")
+
+// HTF Candle
+showHTFCandle = input.bool(true, "Show HTF Candle", group="HTF Candle")
+htfTimeframe = input.timeframe("D", "Timeframe", group="HTF Candle")
+htfCandleOffset = input.int(0, "Candle Offset", minval=0, maxval=200, group="HTF Candle", tooltip="Additional offset for candle only")
+htfCandleWidth = input.int(5, "Candle Width", minval=1, maxval=50, group="HTF Candle")
+htfBodyColorBull = input.color(color.new(color.green, 0), "Body Bull", inline="body", group="HTF Candle")
+htfBodyColorBear = input.color(color.new(color.red, 0), "Body Bear", inline="body", group="HTF Candle")
+htfBorderColorBull = input.color(color.new(color.gray, 0), "Border Bull", inline="border", group="HTF Candle")
+htfBorderColorBear = input.color(color.new(color.black, 0), "Border Bear", inline="border", group="HTF Candle")
+htfWickColorBull = input.color(color.new(color.gray, 0), "Wick Bull", inline="wick", group="HTF Candle")
+htfWickColorBear = input.color(color.new(color.gray, 0), "Wick Bear", inline="wick", group="HTF Candle")
+
+// HTF Candle Labels
+htfShowOHLC = input.bool(true, "Show OHLC Price", group="HTF Candle Labels")
+htfLabelLocation = input.string("Right", "Label Location", options=["Left", "Right"], group="HTF Candle Labels")
+htfLabelDistance = input.int(2, "Label Distance", minval=0, maxval=20, group="HTF Candle Labels")
+htfLineWidth = input.int(1, "OHLC Lines Width", minval=1, maxval=5, group="HTF Candle Labels")
+
+// Max Volume Price
+showMaxVolPrice = input.bool(false, "Show Max Volume Price", group="Max Volume Price")
+showPrevMaxVolPrice = input.bool(false, "Show Previous Max Volume Price", group="Max Volume Price")
+maxVolPriceColor = input.color(color.new(color.yellow, 0), "Max Vol Price Color", group="Max Volume Price")
+maxVolPriceSize = input.int(2, "Price Line Width", minval=1, maxval=5, group="Max Volume Price")
+maxVolDataSource = input.string("Simple", "Data Source", options=["Simple", "LTF"], group="Max Volume Price", tooltip="Simple: works on all plans (free/pro) — DEFAULT untuk free plan\nLTF: akurat tapi butuh Premium+ plan")
+maxVolLTF = input.timeframe("1", "Res", group="Max Volume Price")
+maxVolAuto = input.bool(true, "Auto", inline="auto", group="Max Volume Price")
+maxVolAutoMult = input.int(1500, "", inline="auto", group="Max Volume Price", tooltip="Current TF divided by this value")
+
+// ATR Table
+showATRTable = input.bool(true, "Show ATR Table", group="ATR Table")
+atrLength = input.int(21, "Length", minval=1, group="ATR Table")
+atrSmoothing = input.string("RMA", "Smoothing", options=["RMA", "SMA", "EMA", "WMA"], group="ATR Table")
+atrMultiplier = input.float(1, "Multiplier", minval=0.1, group="ATR Table")
+atrSrc1 = input.string("High", "Src1", options=["High", "Low", "Close"], group="ATR Table")
+atrSrc2 = input.string("Low", "Src2", options=["High", "Low", "Close"], group="ATR Table")
+atrTextColor = input.color(color.new(color.blue, 0), "ATR Text Color", group="ATR Table")
+atrLowTextColor = input.color(color.new(color.teal, 0), "Low Text Color", inline="low", group="ATR Table")
+atrHighTextColor = input.color(color.new(color.red, 0), "High Text Color", inline="high", group="ATR Table")
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// VARIABLES
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var line[] volumeBars = array.new<line>()
+var line pocLine = na
+var line vahLine = na
+var line valLine = na
+var label pocLabel = na
+var label vahLabel = na
+var label valLabel = na
+
+// Previous session levels storage
+var line[]  prevPocLines  = array.new<line>()
+var line[]  prevVahLines  = array.new<line>()
+var line[]  prevValLines  = array.new<line>()
+var label[] prevLabelsArr = array.new<label>()
+
+// HTF Candle variables
+var box htfBody = na
+var line htfHighWick = na
+var line htfLowWick = na
+var line htfOpenLine = na
+var line htfHighLine = na
+var line htfLowLine = na
+var label htfOLabel = na
+var label htfHLabel = na
+var label htfLLabel = na
+var label htfCLabel = na
+
+var float[] volumes = array.new<float>(500, 0.0)
+var float[] upVolumes = array.new<float>(500, 0.0)
+var float[] downVolumes = array.new<float>(500, 0.0)
+var float sessionHigh = na
+var float sessionLow = na
+var int sessionStartBar = na
+
+// Max Volume Price variables
+float maxVolPrice = close
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// PREVIOUS SESSION PROFILE HELPER
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Hitung POC/VAH/VAL untuk sekumpulan bar sebuah sesi (math sama dengan blok sesi berjalan).
+// endOffset = offset bar TERAKHIR sesi (0 = bar sekarang, 1 = bar sebelumnya, dst)
+// numBars   = jumlah bar dalam sesi tersebut
+f_calcProfileLevels(int endOffset, int numBars, float sHigh, float sLow) =>
+    float poc = na
+    float vah = na
+    float val = na
+    float priceRange = sHigh - sLow
+    if priceRange > 0 and numBars > 0
+        float pInterval = priceRange / numRows
+        float[] vols = array.new<float>(numRows, 0.0)
+        for i = endOffset to endOffset + numBars - 1
+            int startRow = int(math.floor((low[i] - sLow) / pInterval))
+            int endRow   = int(math.floor((high[i] - sLow) / pInterval))
+            startRow := math.max(0, math.min(numRows - 1, startRow))
+            endRow   := math.max(0, math.min(numRows - 1, endRow))
+            int rowsCount = endRow - startRow + 1
+            for j = startRow to endRow
+                float priceLevel    = sLow + pInterval * j
+                float priceLevelTop = sLow + pInterval * (j + 1)
+                float overlapTop    = math.min(high[i], priceLevelTop)
+                float overlapBottom = math.max(low[i], priceLevel)
+                float overlapRange  = math.max(0, overlapTop - overlapBottom)
+                float barRange      = high[i] - low[i]
+                float volToAdd      = barRange > 0 ? volume[i] * (overlapRange / barRange) : volume[i] / rowsCount
+                array.set(vols, j, array.get(vols, j) + volToAdd)
+        float maxVol = array.max(vols)
+        if maxVol > 0
+            int pocIndex = array.indexof(vols, maxVol)
+            poc := sLow + pInterval * (pocIndex + 0.5)
+            float totalVolume  = array.sum(vols)
+            float targetVolume = totalVolume * valueAreaVolume / 100
+            int vahIndex = pocIndex
+            int valIndex = pocIndex
+            float acc = array.get(vols, pocIndex)
+            while acc < targetVolume and (vahIndex < numRows - 1 or valIndex > 0)
+                float volumeAbove = vahIndex < numRows - 1 ? array.get(vols, vahIndex + 1) : 0
+                float volumeBelow = valIndex > 0 ? array.get(vols, valIndex - 1) : 0
+                if volumeAbove > volumeBelow and vahIndex < numRows - 1
+                    vahIndex += 1
+                    acc += volumeAbove
+                else if valIndex > 0
+                    valIndex -= 1
+                    acc += volumeBelow
+                else if vahIndex < numRows - 1
+                    vahIndex += 1
+                    acc += volumeAbove
+                else
+                    break
+            vah := sLow + pInterval * (vahIndex + 0.5)
+            val := sLow + pInterval * (valIndex + 0.5)
+    [poc, vah, val]
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// MAX VOLUME PRICE CALCULATION
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+if maxVolDataSource == "LTF"
+    int tfS = timeframe.in_seconds(maxVolLTF)
+    int tfC = timeframe.in_seconds(timeframe.period)
+    int rs = maxVolAuto ? tfC / maxVolAutoMult : tfS
+    rs := math.max(60, rs)
+    string calcLTF = timeframe.from_seconds(math.min(tfC, rs))
+
+    [ltfBuyVol, ltfSellVol, ltfClose, ltfVol] = request.security_lower_tf(
+        syminfo.tickerid, calcLTF,
+        [close > open ? volume : 0, close < open ? volume : 0, close, volume]
+    )
+
+    if ltfVol.size() > 0
+        float bVmax = ltfBuyVol.max()
+        float sVmax = ltfSellVol.max()
+        array<int> sortedIndices = (bVmax > sVmax ? ltfBuyVol : ltfSellVol).sort_indices(order.descending)
+        if sortedIndices.size() > 0
+            maxVolPrice := ltfClose.get(sortedIndices.first())
+else
+    bool isBullish = close >= open
+    if isBullish
+        maxVolPrice := math.avg(close, high)
+    else
+        maxVolPrice := math.avg(close, low)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// SESSION DETECTION
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+isInSession = sessionType == "All" ? true : not na(time(timeframe.period, sessionInput))
+isNewSession = sessionType == "All" ? ta.change(time("D")) != 0 : ta.change(time(timeframe.period, sessionInput)) != 0
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// CALCULATIONS
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+if isNewSession and isInSession
+    // ===== PREVIOUS SESSION LEVELS (added) — hitung sesi yg BARU selesai sebelum reset =====
+    if showPrevLevels and not na(sessionStartBar) and not na(sessionHigh) and not na(sessionLow)
+        int prevBars = math.min(bar_index - sessionStartBar, 4999)
+        if prevBars > 0
+            [pPoc, pVah, pVal] = f_calcProfileLevels(1, prevBars, sessionHigh, sessionLow)
+            if not na(pPoc)
+                int px1 = sessionStartBar
+                int px2 = bar_index
+                line lpoc = line.new(px1, pPoc, px2, pPoc, color=prevPocColor, width=prevLineWidth, style=line.style_solid,  extend=extendPrevRight ? extend.right : extend.none)
+                line lvah = line.new(px1, pVah, px2, pVah, color=prevVaColor,  width=prevLineWidth, style=line.style_dashed, extend=extendPrevRight ? extend.right : extend.none)
+                line lval = line.new(px1, pVal, px2, pVal, color=prevVaColor,  width=prevLineWidth, style=line.style_dashed, extend=extendPrevRight ? extend.right : extend.none)
+                array.push(prevPocLines, lpoc)
+                array.push(prevVahLines, lvah)
+                array.push(prevValLines, lval)
+                if showPrevLabels
+                    array.push(prevLabelsArr, label.new(px2, pPoc, "pPOC", style=label.style_label_left, color=prevPocColor, textcolor=color.white, size=size.small))
+                    array.push(prevLabelsArr, label.new(px2, pVah, "pVAH", style=label.style_label_left, color=prevVaColor,  textcolor=color.white, size=size.small))
+                    array.push(prevLabelsArr, label.new(px2, pVal, "pVAL", style=label.style_label_left, color=prevVaColor,  textcolor=color.white, size=size.small))
+                while array.size(prevPocLines) > numPrevSessions
+                    line.delete(array.shift(prevPocLines))
+                    line.delete(array.shift(prevVahLines))
+                    line.delete(array.shift(prevValLines))
+                while array.size(prevLabelsArr) > numPrevSessions * 3
+                    label.delete(array.shift(prevLabelsArr))
+
+    array.fill(volumes, 0.0)
+    array.fill(upVolumes, 0.0)
+    array.fill(downVolumes, 0.0)
+    if array.size(volumes) != numRows
+        volumes := array.new<float>(numRows, 0.0)
+        upVolumes := array.new<float>(numRows, 0.0)
+        downVolumes := array.new<float>(numRows, 0.0)
+    sessionHigh := high
+    sessionLow := low
+    sessionStartBar := bar_index
+
+if isInSession
+    sessionHigh := math.max(sessionHigh, high)
+    sessionLow := math.min(sessionLow, low)
+
+if barstate.islast and not na(sessionStartBar) and not na(sessionHigh) and not na(sessionLow)
+    int lookback = bar_index - sessionStartBar + 1
+    float priceRange = sessionHigh - sessionLow
+    
+    if priceRange > 0
+        float priceInterval = priceRange / numRows
+        
+        for i = 0 to lookback - 1
+            bool isBullish = close[i] >= open[i]
+            int startRow = int(math.floor((low[i] - sessionLow) / priceInterval))
+            int endRow = int(math.floor((high[i] - sessionLow) / priceInterval))
+            startRow := math.max(0, math.min(numRows - 1, startRow))
+            endRow := math.max(0, math.min(numRows - 1, endRow))
+            int rowsCount = endRow - startRow + 1
+            
+            for j = startRow to endRow
+                float priceLevel = sessionLow + priceInterval * j
+                float priceLevelTop = sessionLow + priceInterval * (j + 1)
+                float overlapTop = math.min(high[i], priceLevelTop)
+                float overlapBottom = math.max(low[i], priceLevel)
+                float overlapRange = math.max(0, overlapTop - overlapBottom)
+                float barRange = high[i] - low[i]
+                float volToAdd = barRange > 0 ? volume[i] * (overlapRange / barRange) : volume[i] / rowsCount
+                
+                array.set(volumes, j, array.get(volumes, j) + volToAdd)
+                if isBullish
+                    array.set(upVolumes, j, array.get(upVolumes, j) + volToAdd)
+                else
+                    array.set(downVolumes, j, array.get(downVolumes, j) + volToAdd)
+        
+        if array.size(volumeBars) > 0
+            for l in volumeBars
+                line.delete(l)
+            array.clear(volumeBars)
+        
+        line.delete(pocLine)
+        line.delete(vahLine)
+        line.delete(valLine)
+        label.delete(pocLabel)
+        label.delete(vahLabel)
+        label.delete(valLabel)
+        
+        float maxVolume = array.max(volumes)
+        
+        if maxVolume > 0
+            int pocIndex = array.indexof(volumes, maxVolume)
+            float pocPrice = sessionLow + priceInterval * (pocIndex + 0.5)
+            
+            float totalVolume = array.sum(volumes)
+            float targetVolume = totalVolume * valueAreaVolume / 100
+            int vahIndex = pocIndex
+            int valIndex = pocIndex
+            float accumulatedVolume = array.get(volumes, pocIndex)
+            
+            while accumulatedVolume < targetVolume and (vahIndex < numRows - 1 or valIndex > 0)
+                float volumeAbove = vahIndex < numRows - 1 ? array.get(volumes, vahIndex + 1) : 0
+                float volumeBelow = valIndex > 0 ? array.get(volumes, valIndex - 1) : 0
+                
+                if volumeAbove > volumeBelow and vahIndex < numRows - 1
+                    vahIndex += 1
+                    accumulatedVolume += volumeAbove
+                else if valIndex > 0
+                    valIndex -= 1
+                    accumulatedVolume += volumeBelow
+                else if vahIndex < numRows - 1
+                    vahIndex += 1
+                    accumulatedVolume += volumeAbove
+                else
+                    break
+            
+            float vahPrice = sessionLow + priceInterval * (vahIndex + 0.5)
+            float valPrice = sessionLow + priceInterval * (valIndex + 0.5)
+            
+            if showVolumeProfile
+                int maxBarWidth = int((bar_index - sessionStartBar) * (profileWidth / 100))
+                int rightEdge = bar_index + globalOffset + profileOffset
+                
+                for i = 0 to numRows - 1
+                    float vol = array.get(volumes, i)
+                    if vol > 0
+                        float upVol = array.get(upVolumes, i)
+                        float downVol = array.get(downVolumes, i)
+                        float priceLevel = sessionLow + priceInterval * (i + 0.5)
+                        int barWidth = int(math.round((vol / maxVolume) * maxBarWidth))
+                        bool isInValueArea = i >= valIndex and i <= vahIndex
+                        
+                        if profilePlacement == "Right"
+                            int x2 = rightEdge
+                            int x1 = x2 - barWidth
+                            if downVol > 0
+                                color col = isInValueArea ? valueAreaDownColor : downVolumeColor
+                                line l = line.new(x1, priceLevel, x2, priceLevel, width=volumeBarThickness, color=col)
+                                array.push(volumeBars, l)
+                            if upVol > 0
+                                float upProportion = upVol / vol
+                                int upWidth = int(barWidth * upProportion)
+                                int upX2 = x2
+                                int upX1 = upX2 - upWidth
+                                color col = isInValueArea ? valueAreaUpColor : upVolumeColor
+                                line l = line.new(upX1, priceLevel, upX2, priceLevel, width=volumeBarThickness, color=col)
+                                array.push(volumeBars, l)
+                        else
+                            int x1 = sessionStartBar
+                            int x2 = x1 + barWidth
+                            if downVol > 0
+                                color col = isInValueArea ? valueAreaDownColor : downVolumeColor
+                                line l = line.new(x1, priceLevel, x2, priceLevel, width=volumeBarThickness, color=col)
+                                array.push(volumeBars, l)
+                            if upVol > 0
+                                float upProportion = upVol / vol
+                                int upWidth = int(barWidth * upProportion)
+                                int upX1 = x1
+                                int upX2 = upX1 + upWidth
+                                color col = isInValueArea ? valueAreaUpColor : upVolumeColor
+                                line l = line.new(upX1, priceLevel, upX2, priceLevel, width=volumeBarThickness, color=col)
+                                array.push(volumeBars, l)
+            
+            if showPOC
+                int pocX1 = sessionStartBar
+                int pocX2 = extendPOCRight ? bar_index + 200 : bar_index + globalOffset + profileOffset
+                pocLine := line.new(pocX1, pocPrice, pocX2, pocPrice, 
+                                   color=pocColor, width=pocWidth, style=line.style_solid,
+                                   extend=extendPOCRight ? extend.right : extend.none)
+                
+                if showLabelsOnPrice
+                    int labelX = labelPosition == "Right" ? pocX2 + labelOffset : pocX1 - labelOffset
+                    string labelStyle = labelPosition == "Right" ? label.style_label_left : label.style_label_right
+                    pocLabel := label.new(labelX, pocPrice, "POC", 
+                                         style=labelStyle, color=pocColor, 
+                                         textcolor=color.white, size=size.small)
+            
+            int vahX1 = sessionStartBar
+            int vahX2 = extendVAHRight ? bar_index + 200 : bar_index + globalOffset + profileOffset
+            vahLine := line.new(vahX1, vahPrice, vahX2, vahPrice, 
+                               color=valueAreaUpColor, width=vahValLineWidth, style=line.style_dashed,
+                               extend=extendVAHRight ? extend.right : extend.none)
+            
+            if showLabelsOnPrice
+                int labelX = labelPosition == "Right" ? vahX2 + labelOffset : vahX1 - labelOffset
+                string labelStyle = labelPosition == "Right" ? label.style_label_left : label.style_label_right
+                vahLabel := label.new(labelX, vahPrice, "VAH", 
+                                     style=labelStyle, color=valueAreaUpColor, 
+                                     textcolor=color.white, size=size.small)
+            
+            int valX1 = sessionStartBar
+            int valX2 = extendVALRight ? bar_index + 200 : bar_index + globalOffset + profileOffset
+            valLine := line.new(valX1, valPrice, valX2, valPrice, 
+                               color=valueAreaDownColor, width=vahValLineWidth, style=line.style_dashed,
+                               extend=extendVALRight ? extend.right : extend.none)
+            
+            if showLabelsOnPrice
+                int labelX = labelPosition == "Right" ? valX2 + labelOffset : valX1 - labelOffset
+                string labelStyle = labelPosition == "Right" ? label.style_label_left : label.style_label_right
+                valLabel := label.new(labelX, valPrice, "VAL", 
+                                     style=labelStyle, color=valueAreaDownColor, 
+                                     textcolor=color.white, size=size.small)
+
+if showHTFCandle and barstate.islast
+    [htfO, htfH, htfL, htfC] = request.security(syminfo.tickerid, htfTimeframe, [open, high, low, close], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+    
+    bool isBullish = htfC >= htfO
+    int candleX = bar_index + globalOffset + htfCandleOffset
+    int halfWidth = int(htfCandleWidth / 2)
+    int candleLeft = candleX - halfWidth
+    int candleRight = candleX + halfWidth
+    
+    box.delete(htfBody)
+    line.delete(htfHighWick)
+    line.delete(htfLowWick)
+    line.delete(htfOpenLine)
+    line.delete(htfHighLine)
+    line.delete(htfLowLine)
+    label.delete(htfOLabel)
+    label.delete(htfHLabel)
+    label.delete(htfLLabel)
+    label.delete(htfCLabel)
+    
+    color bodyColor = isBullish ? htfBodyColorBull : htfBodyColorBear
+    color borderColor = isBullish ? htfBorderColorBull : htfBorderColorBear
+    htfBody := box.new(candleLeft, htfO, candleRight, htfC, 
+                       border_color=borderColor, bgcolor=bodyColor, 
+                       border_width=1)
+    
+    color wickColor = isBullish ? htfWickColorBull : htfWickColorBear
+    float bodyTop = math.max(htfO, htfC)
+    float bodyBottom = math.min(htfO, htfC)
+    
+    if htfH > bodyTop
+        htfHighWick := line.new(candleX, bodyTop, candleX, htfH, 
+                               color=wickColor, width=htfLineWidth)
+    
+    if htfL < bodyBottom
+        htfLowWick := line.new(candleX, bodyBottom, candleX, htfL, 
+                              color=wickColor, width=htfLineWidth)
+    
+    if htfShowOHLC
+        int lineExtension = htfLabelDistance
+        bool labelsOnRight = htfLabelLocation == "Right"
+        
+        if labelsOnRight
+            htfOpenLine := line.new(candleRight, htfO, candleRight + lineExtension, htfO, 
+                                   color=color.gray, width=htfLineWidth)
+            htfOLabel := label.new(candleRight + lineExtension + 1, htfO, "O: " + str.tostring(htfO, format.mintick), 
+                                  style=label.style_label_left, color=color.gray, 
+                                  textcolor=color.white, size=size.small)
+            
+            htfHighLine := line.new(candleRight, htfH, candleRight + lineExtension, htfH, 
+                                   color=color.gray, width=htfLineWidth)
+            htfHLabel := label.new(candleRight + lineExtension + 1, htfH, "H: " + str.tostring(htfH, format.mintick), 
+                                  style=label.style_label_left, color=color.gray, 
+                                  textcolor=color.white, size=size.small)
+            
+            htfLowLine := line.new(candleRight, htfL, candleRight + lineExtension, htfL, 
+                                  color=color.gray, width=htfLineWidth)
+            htfLLabel := label.new(candleRight + lineExtension + 1, htfL, "L: " + str.tostring(htfL, format.mintick), 
+                                  style=label.style_label_left, color=color.gray, 
+                                  textcolor=color.white, size=size.small)
+            
+            htfCLabel := label.new(candleRight + lineExtension + 1, htfC, "C: " + str.tostring(htfC, format.mintick), 
+                                  style=label.style_label_left, color=bodyColor, 
+                                  textcolor=color.white, size=size.small)
+        else
+            htfOpenLine := line.new(candleLeft - lineExtension, htfO, candleLeft, htfO, 
+                                   color=color.gray, width=htfLineWidth)
+            htfOLabel := label.new(candleLeft - lineExtension - 1, htfO, "O: " + str.tostring(htfO, format.mintick), 
+                                  style=label.style_label_right, color=color.gray, 
+                                  textcolor=color.white, size=size.small)
+            
+            htfHighLine := line.new(candleLeft - lineExtension, htfH, candleLeft, htfH, 
+                                   color=color.gray, width=htfLineWidth)
+            htfHLabel := label.new(candleLeft - lineExtension - 1, htfH, "H: " + str.tostring(htfH, format.mintick), 
+                                  style=label.style_label_right, color=color.gray, 
+                                  textcolor=color.white, size=size.small)
+            
+            htfLowLine := line.new(candleLeft - lineExtension, htfL, candleLeft, htfL, 
+                                  color=color.gray, width=htfLineWidth)
+            htfLLabel := label.new(candleLeft - lineExtension - 1, htfL, "L: " + str.tostring(htfL, format.mintick), 
+                                  style=label.style_label_right, color=color.gray, 
+                                  textcolor=color.white, size=size.small)
+            
+            htfCLabel := label.new(candleLeft - lineExtension - 1, htfC, "C: " + str.tostring(htfC, format.mintick), 
+                                  style=label.style_label_right, color=bodyColor, 
+                                  textcolor=color.white, size=size.small)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// MAX VOLUME PRICE PLOTS
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+plotcandle(showMaxVolPrice ? maxVolPrice : na, showMaxVolPrice ? maxVolPrice : na, 
+           showMaxVolPrice ? maxVolPrice : na, showMaxVolPrice ? maxVolPrice : na, 
+           color=maxVolPriceColor, wickcolor=na, bordercolor=maxVolPriceColor, 
+           display=display.all - display.status_line)
+
+plot(showPrevMaxVolPrice ? maxVolPrice : na, color=maxVolPriceColor, 
+     style=plot.style_circles, linewidth=maxVolPriceSize, offset=1, 
+     display=display.all - display.status_line)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// ATR TABLE
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+if showATRTable
+    var table atrTable = table.new(position.bottom_center, 3, 1, border_width=3)
+    
+    float source1 = atrSrc1 == "High" ? high : (atrSrc1 == "Low" ? low : close)
+    float source2 = atrSrc2 == "High" ? high : (atrSrc2 == "Low" ? low : close)
+    
+    float atrValue = 0.0
+    if atrSmoothing == "RMA"
+        atrValue := ta.rma(ta.tr(true), atrLength)
+    else if atrSmoothing == "SMA"
+        atrValue := ta.sma(ta.tr(true), atrLength)
+    else if atrSmoothing == "EMA"
+        atrValue := ta.ema(ta.tr(true), atrLength)
+    else if atrSmoothing == "WMA"
+        atrValue := ta.wma(ta.tr(true), atrLength)
+    
+    float atrMultiplied = atrValue * atrMultiplier
+    float highStop = source1 + atrMultiplied
+    float lowStop = source2 - atrMultiplied
+    
+    if barstate.islast
+        table.cell(atrTable, 0, 0, "ATR: " + str.tostring(atrMultiplied, "#.#"), 
+                   text_color=atrTextColor, bgcolor=color.new(color.white, 100))
+        table.cell(atrTable, 1, 0, "H: " + str.tostring(highStop, "#.#"), 
+                   text_color=atrHighTextColor, bgcolor=color.new(color.white, 100))
+        table.cell(atrTable, 2, 0, "L: " + str.tostring(lowStop, "#.#"), 
+                   text_color=atrLowTextColor, bgcolor=color.new(color.white, 100))
+
+plot(showMaxVolPrice ? maxVolPrice : na, "Max Volume Price", display=display.data_window)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// END
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
