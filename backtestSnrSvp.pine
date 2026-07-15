@@ -1,0 +1,352 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Custom — Backtest engine untuk metodologi SnR + SVP (scalping XAU/Forex)
+//
+// ⚠️ CATATAN JUJUR SOAL "TARGET 85%":
+// ==================================================
+// Win rate itu HASIL backtest, bukan angka yang bisa di-hardcode. Script ini TIDAK
+// memaksa 85% — dia mereplikasi logika entry indikatormu (diamond SnR + konfirmasi
+// SVP POC/VAH/VAL + filter EMA200/RSI/sesi) lalu BIARKAN TradingView menghitung win rate
+// yang sebenarnya di tab "Strategy Tester".
+//
+// Cara realistis mendekati 85%:
+//   1. Nyalakan SEMUA filter (confluence SVP ON, EMA200 ON, RSI ON, sesi London/NY ON).
+//      Makin ketat filter → makin sedikit trade tapi makin tinggi win rate.
+//   2. Pakai TP kecil + SL agak lebar (RR < 1). Win rate naik secara mekanis, TAPI ingat:
+//      RR rendah artinya 1 loss bisa menghapus beberapa win. JANGAN cuma kejar win rate —
+//      lihat juga Net Profit & Profit Factor. Win rate 85% dengan RR 1:3 jauh lebih bagus
+//      daripada 85% dengan RR 3:1.
+//   3. Backtest per-pair & per-TF (M5/M15) — setting optimal beda tiap instrumen.
+//
+// Ini ALAT UJI, bukan mesin uang instan. Baca hasilnya dengan jujur.
+// ==================================================
+
+//@version=5
+strategy("Backtest SnR + SVP [Scalping XAU/Forex]", shorttitle="BT SnR+SVP", overlay=true,
+     max_boxes_count=50, max_bars_back=5000,
+     default_qty_type=strategy.percent_of_equity, default_qty_value=10,
+     initial_capital=10000, commission_type=strategy.commission.percent, commission_value=0.0,
+     slippage=0, pyramiding=0, calc_on_every_tick=false)
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙄𝙉𝙋𝙐𝙏𝙎
+// ---------------------------------------------------------------------------------------------------------------------{
+
+// --- Arah trade ---
+tradeDir = input.string("Both", "Arah Trade", options=["Both", "Long Only", "Short Only"], group="Arah")
+
+// --- S/R (disamakan dengan supportAndResistance.pine) ---
+bool autoSettings   = input.bool(true, "🔄 Auto-Adjust Settings by Timeframe", group="S/R Settings")
+int  manualLookback = input.int(7, "Manual Lookback", minval=1, group="S/R Settings")
+int  manualVolLen   = input.int(2, "Manual Volume Filter", minval=1, group="S/R Settings")
+float manualBoxWidth = input.float(1.0, "Manual Box Width", maxval=10, minval=0.1, step=0.1, group="S/R Settings")
+bool useRetest      = input.bool(true, "Ikutkan sinyal Break & Retest (RBS/SBR)", group="S/R Settings")
+bool useFirstTouch  = input.bool(false, "Ikutkan sinyal First Touch (hold)", group="S/R Settings",
+     tooltip="Default OFF. Indikatormu sendiri bilang 'M5 diamonds alone = 70% FAKE'. First Touch = retail noise. Nyalain hanya kalau mau lihat efeknya.")
+
+// --- Konfirmasi SVP (POC / VAH / VAL sesi sebelumnya) ---
+bool  useSVP        = input.bool(true, "✅ Wajib konfirmasi SVP (confluence POC/VAH/VAL)", group="SVP Confluence",
+     tooltip="Entry hanya valid kalau level S/R nyambung dengan POC/VAH/VAL sesi sebelumnya. Ini inti dari 'confluence' — level lebih kuat.")
+float svpTolAtr     = input.float(0.5, "Toleransi jarak ke level SVP (× ATR)", minval=0.05, step=0.05, group="SVP Confluence",
+     tooltip="Seberapa dekat harga entry harus ke POC/VAH/VAL agar dianggap 'nyambung'. 0.5 = dalam setengah ATR.")
+int   svpRows       = input.int(100, "SVP Number of Rows (resolusi profile)", minval=30, maxval=300, group="SVP Confluence")
+int   svpValueArea  = input.int(70, "Value Area Volume %", minval=1, maxval=100, group="SVP Confluence")
+int   svpMaxBars    = input.int(600, "Max bar per sesi diproses (batas performa)", minval=100, maxval=2000, group="SVP Confluence",
+     tooltip="Batasi jumlah bar profile per hari supaya backtest M1 tidak timeout. M5 seharian ≈ 288 bar.")
+
+// --- Filter M15 BIAS ("M15 DECIDES, M5 EXECUTES") ---
+bool useM15Bias  = input.bool(true, "🧭 Filter M15 BIAS (entry M5 harus searah M15)", group="Filter M15 BIAS",
+     tooltip="Inti metodologimu: M15 tentukan arah, M5 eksekusi. Buy hanya kalau M15 bullish (harga>EMA200 M15 & RSI M15>50). Anti-repaint (lookahead_off).")
+string htfBiasTF = input.timeframe("15", "Timeframe BIAS", group="Filter M15 BIAS")
+bool useM15Rsi   = input.bool(true, "Sertakan RSI M15 dalam filter bias", group="Filter M15 BIAS")
+
+// --- Filter tren & momentum (dari strategy-rules.md) ---
+bool useEma   = input.bool(true, "Filter EMA200 (long di atas, short di bawah)", group="Filter Tren/Momentum")
+int  emaLen   = input.int(200, "EMA Length", minval=1, group="Filter Tren/Momentum")
+bool useRsi   = input.bool(true, "Filter RSI (>45 & naik utk buy, <55 & turun utk sell)", group="Filter Tren/Momentum")
+int  rsiLen   = input.int(14, "RSI Length", minval=1, group="Filter Tren/Momentum")
+float rsiBuy  = input.float(45, "RSI min utk BUY", group="Filter Tren/Momentum")
+float rsiSell = input.float(55, "RSI max utk SELL", group="Filter Tren/Momentum")
+
+// --- Filter sesi (London / New York) ---
+bool useSession = input.bool(true, "Hanya entry di sesi London/New York", group="Filter Sesi")
+string sessLondon = input.session("1500-0000", "Sesi London (waktu chart)", group="Filter Sesi",
+     tooltip="Default asumsi chart pakai WIB (UTC+7): London 15:00–24:00. Sesuaikan dengan timezone chart-mu.")
+string sessNY     = input.session("1930-0400", "Sesi New York (waktu chart)", group="Filter Sesi",
+     tooltip="Default asumsi WIB: New York 19:30–04:00. Sesuaikan kalau timezone chart beda.")
+
+// --- Manajemen risiko (SL / TP) ---
+string slMode = input.string("ATR", "Mode Stop Loss", options=["ATR", "Box Edge"], group="Risk Management")
+float slAtrMult = input.float(1.5, "SL = ATR ×", minval=0.1, step=0.1, group="Risk Management")
+float rrRatio   = input.float(1.5, "Risk:Reward (TP = SL × RR)", minval=0.1, step=0.1, group="Risk Management",
+     tooltip="RR 1.5 = TP 1.5× jarak SL. Turunkan (mis. 1.0/0.8) kalau mau kejar win rate lebih tinggi — tapi cek Profit Factor!")
+int slBuffPips  = input.int(5, "Buffer SL (pips/point)", minval=0, group="Risk Management")
+bool exitEOD    = input.bool(false, "Tutup posisi di akhir hari (no overnight)", group="Risk Management")
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙎𝙀𝙏𝙏𝙄𝙉𝙂𝙎 (auto per TF + Gold) — sama persis dgn indikator S/R
+// ---------------------------------------------------------------------------------------------------------------------{
+getOptimalSettings() =>
+    tf = timeframe.period
+    if tf == "1"
+        [5, 2, 0.6]
+    else if tf == "5"
+        [8, 2, 1.0]
+    else if tf == "15"
+        [10, 2, 1.0]
+    else if tf == "30"
+        [12, 3, 1.2]
+    else if timeframe.isintraday == false or timeframe.isdaily
+        [15, 4, 1.5]
+    else
+        [7, 2, 1.0]
+
+[defLookback, defVolLen, defBoxWidth] = getOptimalSettings()
+int   lookbackPeriod = autoSettings ? defLookback : manualLookback
+int   vol_len        = autoSettings ? defVolLen : manualVolLen
+float box_withd_base = autoSettings ? defBoxWidth : manualBoxWidth
+
+bool isGold = str.contains(syminfo.ticker, "XAU") or str.contains(syminfo.ticker, "GOLD")
+float box_withd = box_withd_base * (isGold ? 1.2 : 1.0)
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙎/𝙍 𝘾𝘼𝙇𝘾 (port dari supportAndResistance.pine)
+// ---------------------------------------------------------------------------------------------------------------------{
+upAndDownVolume() =>
+    var isBuyVolume = true
+    switch
+        close > open => isBuyVolume := true
+        close < open => isBuyVolume := false
+    (isBuyVolume ? volume : -volume)
+
+calcSupportResistance(src, lookbackPeriod) =>
+    Vol    = upAndDownVolume()
+    vol_hi = ta.highest(Vol/2.5, vol_len)
+    vol_lo = ta.lowest(Vol/2.5, vol_len)
+
+    var float supportLevel      = na
+    var float supportLevel_1    = na
+    var float resistanceLevel   = na
+    var float resistanceLevel_1 = na
+    var bool  brekout_res       = na
+    var bool  brekout_sup       = na
+    var bool  res_holds         = na
+    var bool  sup_holds         = na
+
+    pivotHigh = ta.pivothigh(src, lookbackPeriod, lookbackPeriod)
+    pivotLow  = ta.pivotlow (src, lookbackPeriod, lookbackPeriod)
+    atr       = ta.atr(200)
+    withd     = atr * box_withd
+
+    if (not na(pivotLow)) and Vol > vol_hi
+        supportLevel   := pivotLow
+        supportLevel_1 := supportLevel - withd
+
+    if (not na(pivotHigh)) and Vol < vol_lo
+        resistanceLevel   := pivotHigh
+        resistanceLevel_1 := resistanceLevel + withd
+
+    brekout_res := ta.crossover(low, resistanceLevel_1)
+    res_holds   := ta.crossunder(high, resistanceLevel)
+    sup_holds   := ta.crossover(low, supportLevel)
+    brekout_sup := ta.crossunder(high, supportLevel_1)
+
+    [supportLevel, resistanceLevel, supportLevel_1, resistanceLevel_1, brekout_res, res_holds, sup_holds, brekout_sup]
+
+[supportLevel, resistanceLevel, supportLevel_1, resistanceLevel_1,
+     brekout_res, res_holds, sup_holds, brekout_sup] = calcSupportResistance(close, lookbackPeriod)
+
+var bool res_is_sup = na
+var bool sup_is_res = na
+switch
+    brekout_res => res_is_sup := true
+    res_holds   => res_is_sup := false
+switch
+    brekout_sup => sup_is_res := true
+    sup_holds   => sup_is_res := false
+
+// Sinyal diamond (identik dgn plotchar di indikator)
+bool sigBuyTouch  = sup_holds
+bool sigSellTouch = res_holds
+bool sigBuyRetest  = res_is_sup and ta.crossover(low, resistanceLevel)
+bool sigSellRetest = sup_is_res and ta.crossunder(high, supportLevel)
+
+bool rawBuy  = (useFirstTouch and sigBuyTouch)  or (useRetest and sigBuyRetest)
+bool rawSell = (useFirstTouch and sigSellTouch) or (useRetest and sigSellRetest)
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙎𝙑𝙋 — POC/VAH/VAL sesi (hari) SEBELUMNYA sbg level confluence (port dari svp.pine)
+// ---------------------------------------------------------------------------------------------------------------------{
+f_calcProfileLevels(int endOffset, int numBars, float sHigh, float sLow) =>
+    float poc = na
+    float vah = na
+    float val = na
+    float priceRange = sHigh - sLow
+    if priceRange > 0 and numBars > 0
+        float pInterval = priceRange / svpRows
+        float[] vols = array.new<float>(svpRows, 0.0)
+        for i = endOffset to endOffset + numBars - 1
+            int startRow = int(math.floor((low[i] - sLow) / pInterval))
+            int endRow   = int(math.floor((high[i] - sLow) / pInterval))
+            startRow := math.max(0, math.min(svpRows - 1, startRow))
+            endRow   := math.max(0, math.min(svpRows - 1, endRow))
+            int rowsCount = endRow - startRow + 1
+            for j = startRow to endRow
+                float priceLevel    = sLow + pInterval * j
+                float priceLevelTop = sLow + pInterval * (j + 1)
+                float overlapTop    = math.min(high[i], priceLevelTop)
+                float overlapBottom = math.max(low[i], priceLevel)
+                float overlapRange  = math.max(0, overlapTop - overlapBottom)
+                float barRange      = high[i] - low[i]
+                float volToAdd      = barRange > 0 ? volume[i] * (overlapRange / barRange) : volume[i] / rowsCount
+                array.set(vols, j, array.get(vols, j) + volToAdd)
+        float maxVol = array.max(vols)
+        if maxVol > 0
+            int pocIndex = array.indexof(vols, maxVol)
+            poc := sLow + pInterval * (pocIndex + 0.5)
+            float totalVolume  = array.sum(vols)
+            float targetVolume = totalVolume * svpValueArea / 100
+            int vahIndex = pocIndex
+            int valIndex = pocIndex
+            float acc = array.get(vols, pocIndex)
+            while acc < targetVolume and (vahIndex < svpRows - 1 or valIndex > 0)
+                float volumeAbove = vahIndex < svpRows - 1 ? array.get(vols, vahIndex + 1) : 0
+                float volumeBelow = valIndex > 0 ? array.get(vols, valIndex - 1) : 0
+                if volumeAbove > volumeBelow and vahIndex < svpRows - 1
+                    vahIndex += 1
+                    acc += volumeAbove
+                else if valIndex > 0
+                    valIndex -= 1
+                    acc += volumeBelow
+                else if vahIndex < svpRows - 1
+                    vahIndex += 1
+                    acc += volumeAbove
+                else
+                    break
+            vah := sLow + pInterval * (vahIndex + 0.5)
+            val := sLow + pInterval * (valIndex + 0.5)
+    [poc, vah, val]
+
+// Track sesi harian (reset tiap ganti hari), simpan level sesi sebelumnya sbg confluence aktif
+var float sessHigh = na
+var float sessLow  = na
+var int   sessStart = na
+var float pocLvl = na
+var float vahLvl = na
+var float valLvl = na
+
+bool isNewDay = ta.change(time("D")) != 0
+
+if isNewDay
+    if not na(sessStart) and not na(sessHigh) and not na(sessLow)
+        int prevBars = math.min(bar_index - sessStart, svpMaxBars)
+        if prevBars > 0
+            [p, vh, vl] = f_calcProfileLevels(1, prevBars, sessHigh, sessLow)
+            if not na(p)
+                pocLvl := p
+                vahLvl := vh
+                valLvl := vl
+    sessHigh := high
+    sessLow  := low
+    sessStart := bar_index
+else
+    sessHigh := math.max(sessHigh, high)
+    sessLow  := math.min(sessLow, low)
+
+// Confluence: harga entry dekat salah satu POC/VAH/VAL sesi sebelumnya
+float atrTol = ta.atr(14) * svpTolAtr
+nearLevel(price) =>
+    bool hit = false
+    if not na(pocLvl) and math.abs(price - pocLvl) <= atrTol
+        hit := true
+    if not na(vahLvl) and math.abs(price - vahLvl) <= atrTol
+        hit := true
+    if not na(valLvl) and math.abs(price - valLvl) <= atrTol
+        hit := true
+    hit
+
+bool svpOkBuy  = not useSVP or nearLevel(close)
+bool svpOkSell = not useSVP or nearLevel(close)
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙁𝙄𝙇𝙏𝙀𝙍 𝙏𝙍𝙀𝙉 / 𝙈𝙊𝙈𝙀𝙉𝙏𝙐𝙈 / 𝙎𝙀𝙎𝙄
+// ---------------------------------------------------------------------------------------------------------------------{
+float ema200 = ta.ema(close, emaLen)
+float rsi    = ta.rsi(close, rsiLen)
+bool rsiRising  = rsi > rsi[1]
+bool rsiFalling = rsi < rsi[1]
+
+bool emaOkBuy  = not useEma or close > ema200
+bool emaOkSell = not useEma or close < ema200
+bool rsiOkBuy  = not useRsi or (rsi > rsiBuy and rsiRising)
+bool rsiOkSell = not useRsi or (rsi < rsiSell and rsiFalling)
+
+bool inLondon = not na(time(timeframe.period, sessLondon))
+bool inNY     = not na(time(timeframe.period, sessNY))
+bool sessOk   = not useSession or inLondon or inNY
+
+// --- Filter M15 BIAS (anti-repaint: nilai HTF hanya update saat bar HTF close) ---
+float htfEma   = request.security(syminfo.tickerid, htfBiasTF, ta.ema(close, emaLen), lookahead=barmerge.lookahead_off)
+float htfClose = request.security(syminfo.tickerid, htfBiasTF, close,                 lookahead=barmerge.lookahead_off)
+float htfRsi   = request.security(syminfo.tickerid, htfBiasTF, ta.rsi(close, rsiLen), lookahead=barmerge.lookahead_off)
+bool biasOkBuy  = not useM15Bias or (htfClose > htfEma and (not useM15Rsi or htfRsi > 50))
+bool biasOkSell = not useM15Bias or (htfClose < htfEma and (not useM15Rsi or htfRsi < 50))
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙁𝙄𝙉𝘼𝙇 𝙀𝙉𝙏𝙍𝙔 𝘾𝙊𝙉𝘿𝙄𝙏𝙄𝙊𝙉𝙎
+// ---------------------------------------------------------------------------------------------------------------------{
+bool allowLong  = tradeDir != "Short Only"
+bool allowShort = tradeDir != "Long Only"
+
+bool longSignal  = allowLong  and rawBuy  and svpOkBuy  and emaOkBuy  and rsiOkBuy  and sessOk and biasOkBuy
+bool shortSignal = allowShort and rawSell and svpOkSell and emaOkSell and rsiOkSell and sessOk and biasOkSell
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙀𝙓𝙀𝘾𝙐𝙏𝙄𝙊𝙉 (entry + SL/TP)
+// ---------------------------------------------------------------------------------------------------------------------{
+float pip = syminfo.mintick * 10
+float buff = slBuffPips * syminfo.mintick
+float atrNow = ta.atr(14)
+
+// Hitung SL distance
+f_slPrice(bool isLong) =>
+    float slp = na
+    if slMode == "ATR"
+        slp := isLong ? close - atrNow * slAtrMult - buff : close + atrNow * slAtrMult + buff
+    else // Box Edge
+        if isLong
+            float edge = not na(supportLevel_1) ? supportLevel_1 : close - atrNow * slAtrMult
+            slp := edge - buff
+        else
+            float edge = not na(resistanceLevel_1) ? resistanceLevel_1 : close + atrNow * slAtrMult
+            slp := edge + buff
+    slp
+
+if longSignal and strategy.position_size <= 0
+    float slp = f_slPrice(true)
+    float risk = close - slp
+    float tp = close + risk * rrRatio
+    if risk > 0
+        strategy.entry("Long", strategy.long)
+        strategy.exit("Long TP/SL", "Long", stop=slp, limit=tp)
+
+if shortSignal and strategy.position_size >= 0
+    float slp = f_slPrice(false)
+    float risk = slp - close
+    float tp = close - risk * rrRatio
+    if risk > 0
+        strategy.entry("Short", strategy.short)
+        strategy.exit("Short TP/SL", "Short", stop=slp, limit=tp)
+
+// Tutup di akhir hari (opsional)
+if exitEOD and isNewDay and strategy.position_size != 0
+    strategy.close_all(comment="EOD")
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙑𝙄𝙎𝙐𝘼𝙇 (bantu verifikasi entry di chart)
+// ---------------------------------------------------------------------------------------------------------------------{
+plotshape(longSignal,  "BUY",  shape.triangleup,   location.belowbar, color.new(color.green, 0), size=size.tiny)
+plotshape(shortSignal, "SELL", shape.triangledown, location.abovebar, color.new(color.red, 0),   size=size.tiny)
+plot(useEma ? ema200 : na, "EMA200", color=color.new(color.orange, 0))
+plot(not na(pocLvl) ? pocLvl : na, "prev POC", color=color.new(color.fuchsia, 0), style=plot.style_linebr)
+plot(not na(vahLvl) ? vahLvl : na, "prev VAH", color=color.new(color.teal, 0),    style=plot.style_linebr)
+plot(not na(valLvl) ? valLvl : na, "prev VAL", color=color.new(color.teal, 0),    style=plot.style_linebr)
