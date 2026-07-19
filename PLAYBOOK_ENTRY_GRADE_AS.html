@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playbook Entry — Grade S & A (XAU / Forex)</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --card2:#1c2330; --line:#2d333b;
+    --txt:#e6edf3; --muted:#8b949e;
+    --green:#20ca26; --red:#e92929; --gold:#f5c518; --blue:#3b82f6; --orange:#f59e0b; --purple:#a371f7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.55;padding:24px 16px 80px}
+  .wrap{max-width:920px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 4px}
+  h2{font-size:20px;margin:34px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+  h3{font-size:16px;margin:18px 0 8px}
+  .sub{color:var(--muted);margin:0 0 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  .buy{border-left:4px solid var(--green)}
+  .sell{border-left:4px solid var(--red)}
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;margin-right:6px}
+  .p-s{background:rgba(245,197,24,.15);color:var(--gold);border:1px solid var(--gold)}
+  .p-a{background:rgba(32,202,38,.15);color:var(--green);border:1px solid var(--green)}
+  .p-skip{background:rgba(233,41,41,.12);color:var(--red);border:1px solid var(--red)}
+  ul{margin:8px 0 8px 0;padding-left:20px}
+  li{margin:5px 0}
+  .chk li{list-style:none;position:relative;padding-left:26px}
+  .chk li:before{content:"☐";position:absolute;left:0;color:var(--muted);font-size:16px}
+  .chk li.must:before{content:"✅";}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--card2);color:var(--txt)}
+  .tag{font-weight:700}
+  .g{color:var(--green)} .r{color:var(--red)} .y{color:var(--gold)} .b{color:var(--blue)} .o{color:var(--orange)} .m{color:var(--muted)} .pp{color:var(--purple)}
+  .step{display:flex;gap:12px;align-items:flex-start;margin:10px 0}
+  .num{flex:0 0 34px;height:34px;width:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;background:var(--card2);border:1px solid var(--line)}
+  .num.m15{color:var(--green)} .num.m5{color:var(--blue)} .num.m1{color:var(--purple)}
+  .callout{background:var(--card2);border:1px dashed var(--line);border-radius:10px;padding:12px 14px;margin:12px 0}
+  .danger{border-color:var(--red);background:rgba(233,41,41,.06)}
+  .win{border-color:var(--green);background:rgba(32,202,38,.06)}
+  code{background:#0b0f14;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13px}
+  .legend b{display:inline-block;min-width:150px}
+  .small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🎯 Playbook Entry — Grade S &amp; A</h1>
+<p class="sub">XAU / USDJPY / EURUSD / GBPUSD · Scalping top-down M15 → M5 → M1 · Confluence <b>EMA200 + SnR + SVP</b></p>
+
+<div class="callout danger">
+  <b>Aturan emas:</b> Hanya trade setup <span class="pill p-s">S</span> dan <span class="pill p-a">A</span>.
+  Kalau setup cuma <span class="pill p-skip">B / C</span> → <b>SKIP, tunggu yang berikutnya.</b>
+  Nggak entry itu juga posisi. Lebih baik lewatkan 10 setup B daripada 1 loss yang bisa dihindari.
+</div>
+
+<!-- ============================ SISTEM 3 ALAT ============================ -->
+<h2>1. Peran 3 alat (jangan ketuker)</h2>
+<table>
+  <tr><th>Alat</th><th>Jawab pertanyaan</th><th>Dipakai untuk</th></tr>
+  <tr><td class="tag b">EMA200</td><td><b>KE MANA?</b> (arah/bias)</td><td>Filter arah. Buy hanya di atas EMA200, Sell hanya di bawah.</td></tr>
+  <tr><td class="tag g">SnR (box + ◆)</td><td><b>DI MANA?</b> (level &amp; trigger)</td><td>Zona entry + sinyal diamond (hold / retest RBS-SBR).</td></tr>
+  <tr><td class="tag y">SVP (POC/VAH/VAL/HVN/LVN)</td><td><b>SEKUAT APA?</b> (validasi)</td><td>Konfirmasi level. S/R yang nyambung POC/VAH/VAL/HVN = level kelas berat.</td></tr>
+</table>
+<p class="small">Confluence = ketiganya setuju di satu titik. Makin banyak yang setuju, makin tinggi grade-nya.</p>
+
+<!-- ============================ RUBRIK GRADE ============================ -->
+<h2>2. Rubrik Grade (cuma S &amp; A yang boleh dieksekusi)</h2>
+
+<div class="grid2">
+  <div class="card" style="border-left:4px solid var(--gold)">
+    <span class="pill p-s">GRADE S</span> <b>Sniper — confluence penuh</b>
+    <p class="small">Semua kotak ✅. Win rate tertinggi, size boleh normal-penuh.</p>
+    <ul class="chk">
+      <li class="must">Bias EMA200 <b>M15 searah</b> (buy: harga &amp; struktur di atas EMA200)</li>
+      <li class="must">Diamond ◆ muncul di <b>M15</b> (level institusi)</li>
+      <li class="must">Zona SnR <b>nyambung</b> dengan POC / VAH / VAL / HVN (SVP)</li>
+      <li class="must">Retest <b>PERTAMA</b> level (fresh, belum dijilat berkali-kali)</li>
+      <li class="must">Rejection candle jelas di M5/M1 (pin bar / engulfing)</li>
+      <li class="must">Sesi <b>London / New York</b></li>
+      <li class="must">RR minimal <b>1:2</b> (idealnya 1:3) ke target VAH/POC/zona berikut</li>
+    </ul>
+  </div>
+  <div class="card" style="border-left:4px solid var(--green)">
+    <span class="pill p-a">GRADE A</span> <b>Strong — confluence kuat</b>
+    <p class="small">Boleh kurang <b>1</b> item minor dari S (tapi bias EMA200 + rejection candle WAJIB tetap ada). Size sedikit dikurangi.</p>
+    <ul class="chk">
+      <li class="must">Bias EMA200 searah (M15 atau minimal M5)</li>
+      <li class="must">Diamond ◆ di M15 <b>atau</b> retest RBS/SBR yang bersih</li>
+      <li>Minimal <b>1</b> confluence SVP (POC/VAH/VAL/HVN) — boleh "dekat", tak harus pas</li>
+      <li class="must">Rejection candle di M1</li>
+      <li class="must">Sesi aktif (London/NY)</li>
+      <li class="must">RR minimal <b>1:2</b></li>
+    </ul>
+  </div>
+</div>
+
+<div class="callout danger">
+  <b>Auto-DOWNGRADE / SKIP (jadi B-C):</b>
+  <ul>
+    <li>Lawan EMA200 (buy di bawah EMA200 / sell di atas) → <b>SKIP total</b>.</li>
+    <li>Retest ke-3+ level yang sama (biasanya jebol).</li>
+    <li>Zona di "udara" — nggak ada confluence SVP, nggak ada diamond M15.</li>
+    <li>Market jelas ranging &amp; harga di tengah value area (bukan di tepi) → nggak ada edge.</li>
+    <li>Mepet news besar (NFP, FOMC, CPI) → tunggu dulu.</li>
+  </ul>
+</div>
+
+<!-- ============================ BUY / SELL ============================ -->
+<h2>3. Cara baca ENTRY (Buy vs Sell)</h2>
+<div class="grid2">
+  <div class="card buy">
+    <h3 class="g">🟢 BUY — kapan boleh</h3>
+    <p class="small">Konteks: harga <b>DI ATAS EMA200</b> (bias naik).</p>
+    <ol>
+      <li>Harga turun (pullback) ke <b>support SnR</b> yang nyambung <b>VAL / POC / HVN</b>.</li>
+      <li>Muncul <b>◆ hijau di bawah candle</b> (support hold) <b>atau</b> ◆ hijau retest <b>RBS</b> (resistance lama jadi support).</li>
+      <li>Turun ke M1: tunggu <b>rejection candle bullish</b> (pin bar bawah / bullish engulfing) tepat di level.</li>
+      <li><b>ENTRY BUY</b> saat candle rejection close.</li>
+    </ol>
+    <div class="callout win small">
+      <b>SL:</b> di bawah box support + buffer 5–10 pip (XAU lebih lebar).<br>
+      <b>TP:</b> POC → VAH → resistance/HVN berikutnya. <span class="o">LVN</span> = zona harga lari cepat (target enak).
+    </div>
+  </div>
+  <div class="card sell">
+    <h3 class="r">🔴 SELL — kapan boleh</h3>
+    <p class="small">Konteks: harga <b>DI BAWAH EMA200</b> (bias turun).</p>
+    <ol>
+      <li>Harga naik (pullback) ke <b>resistance SnR</b> yang nyambung <b>VAH / POC / HVN</b>.</li>
+      <li>Muncul <b>◆ merah di atas candle</b> (resistance hold) <b>atau</b> ◆ merah retest <b>SBR</b> (support lama jadi resistance).</li>
+      <li>Turun ke M1: tunggu <b>rejection candle bearish</b> (pin bar atas / bearish engulfing) tepat di level.</li>
+      <li><b>ENTRY SELL</b> saat candle rejection close.</li>
+    </ol>
+    <div class="callout danger small">
+      <b>SL:</b> di atas box resistance + buffer 5–10 pip.<br>
+      <b>TP:</b> POC → VAL → support/HVN berikutnya. <span class="o">LVN</span> = target cepat.
+    </div>
+  </div>
+</div>
+
+<!-- ============================ WORKFLOW ============================ -->
+<h2>4. Workflow top-down (M15 → M5 → M1)</h2>
+<div class="card">
+  <div class="step"><div class="num m15">M15</div><div><b>BIAS.</b> Cek posisi harga vs EMA200 (di info-table SnR: <span class="g">▲ BULLISH</span>/<span class="r">▼ BEARISH</span>). Cari diamond ◆ di S/R. Tandai level utama yang nyambung POC/VAH/VAL. <i>Ini alasanmu trade.</i></div></div>
+  <div class="step"><div class="num m5">M5</div><div><b>TREND / KONFIRMASI.</b> Pastikan arah M5 searah bias M15. Tunggu harga <b>retest</b> level M15 tadi. Diamond ◆ di M5 memperkuat.</div></div>
+  <div class="step"><div class="num m1">M1</div><div><b>EKSEKUSI.</b> Cari <b>rejection candle</b> presisi di level. Entry, pasang SL ketat, target sesuai RR. <i>M1 hanya untuk timing, bukan untuk cari alasan trade.</i></div></div>
+</div>
+<div class="callout danger small"><b>Ingat:</b> ❌ Jangan pernah entry dari diamond M5/M1 sendirian tanpa restu M15 — 70% palsu (stop hunt). M15 memutuskan, M1 mengeksekusi.</div>
+
+<!-- ============================ LEGENDA VISUAL ============================ -->
+<h2>5. Legenda visual (buat baca screenshot)</h2>
+<div class="card legend small">
+  <p><b>◆ hijau (bawah)</b> = sinyal BUY (support hold / RBS retest)</p>
+  <p><b>◆ merah (atas)</b> = sinyal SELL (resistance hold / SBR retest)</p>
+  <p><b>Box hijau</b> = zona support &nbsp;·&nbsp; <b>Box merah</b> = zona resistance</p>
+  <p><b class="o">Box oranye "SBR ⚠"</b> = support jebol jadi resistance (siap SELL di retest)</p>
+  <p><b class="o">Box oranye "RBS ⚠"</b> = resistance jebol jadi support (siap BUY di retest)</p>
+  <p><b class="b">Garis EMA200</b> = bias; harga di atas = cari buy, di bawah = cari sell</p>
+  <p><b class="pp">POC</b> = magnet harga &nbsp;·&nbsp; <b>VAH/VAL</b> = tepi value area (target &amp; tempat mantul)</p>
+  <p><b class="g">HVN</b> = node volume tinggi (S/R kuat) &nbsp;·&nbsp; <b class="o">LVN</b> = node volume rendah (harga lari cepat = target)</p>
+</div>
+
+<!-- ============================ SCORECARD ============================ -->
+<h2>6. Scorecard cepat (isi sebelum entry)</h2>
+<table>
+  <tr><th>Cek</th><th>Buy</th><th>Sell</th></tr>
+  <tr><td>Harga vs EMA200 (M15)</td><td class="g">di ATAS</td><td class="r">di BAWAH</td></tr>
+  <tr><td>Diamond ◆ di M15</td><td class="g">hijau (bawah)</td><td class="r">merah (atas)</td></tr>
+  <tr><td>Confluence SVP</td><td>support ≈ VAL/POC/HVN</td><td>resistance ≈ VAH/POC/HVN</td></tr>
+  <tr><td>Retest ke-berapa</td><td colspan="2">Pertama = terbaik · ke-3+ = skip</td></tr>
+  <tr><td>Rejection candle (M1)</td><td>bullish pin/engulf</td><td>bearish pin/engulf</td></tr>
+  <tr><td>Sesi</td><td colspan="2">London / New York</td></tr>
+  <tr><td>RR</td><td colspan="2">≥ 1:2 (S butuh 1:3 idealnya)</td></tr>
+  <tr><td><b>Skor</b></td><td colspan="2"><b>Semua ✅ = S</b> · <b>kurang 1 minor = A</b> · <b>lawan EMA200 / no confluence = SKIP</b></td></tr>
+</table>
+
+<div class="callout">
+  <b>Kirim screenshot ke aku:</b> XAU <b>M15 + M5 + M1</b> (bertiga lebih bagus), pastikan <b>EMA200, box SnR, dan level SVP kelihatan</b>.
+  Nanti aku kasih: <b>grade (S/A/SKIP)</b>, titik <b>entry</b>, <b>SL</b>, <b>TP</b>, dan alasannya per timeframe.
+</div>
+
+<p class="small" style="margin-top:30px;text-align:center;color:var(--muted)">Disiplin &gt; sering entry. Target: rumah Jogja 1,5 M &amp; merdeka dari 9–5. Sabar di setup A/S. 🏠</p>
+
+</div>
+</body>
+</html>

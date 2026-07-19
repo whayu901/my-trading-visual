@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Library XAU — SnR + SVP</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2b3444;
+    --txt:#e6edf3; --muted:#8b98a9; --green:#20ca26; --red:#e92929;
+    --blue:#3b82f6; --purple:#a855f7; --orange:#f59e0b; --gold:#ffd447;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;padding:32px 16px}
+  .wrap{max-width:920px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 24px;font-size:14px}
+  h2{font-size:19px;margin:30px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700}
+  .buy{background:rgba(32,202,38,.15);color:var(--green)}
+  .sell{background:rgba(233,41,41,.15);color:var(--red)}
+  .flip{background:rgba(245,158,11,.15);color:var(--orange)}
+  .poc{background:rgba(168,85,247,.15);color:var(--purple)}
+  .win{background:rgba(32,202,38,.15);color:var(--green)}
+  .loss{background:rgba(233,41,41,.15);color:var(--red)}
+  .be{background:rgba(139,152,169,.18);color:var(--muted)}
+
+  /* --- Case card --- */
+  .case{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:22px 0;background:var(--panel)}
+  .case-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:14px 18px;background:linear-gradient(135deg,#1c2330,#161b22);border-bottom:1px solid var(--line)}
+  .case-head .id{font-size:17px;font-weight:800}
+  .case-head .meta{color:var(--muted);font-size:13px}
+  .case-head .spacer{flex:1}
+  .case-body{padding:18px}
+  .badge{padding:3px 10px;border-radius:8px;font-size:13px;font-weight:800}
+  .rr{font-size:13px;color:var(--muted)}
+  .rr b{color:var(--txt)}
+
+  /* 3-TF row */
+  .tfs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:4px 0 6px}
+  .tf{background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .tf .lbl{font-size:11px;font-weight:800;letter-spacing:.5px;padding:6px 10px;color:#fff}
+  .tf.m15 .lbl{background:var(--green)}
+  .tf.m5  .lbl{background:var(--blue)}
+  .tf.m1  .lbl{background:var(--purple)}
+  .tf .shot{aspect-ratio:16/10;background:repeating-linear-gradient(45deg,#12161d,#12161d 10px,#151a22 10px,#151a22 20px);
+    display:flex;align-items:center;justify-content:center;color:#55617a;font-size:12px;text-align:center;padding:8px}
+  .tf img{width:100%;display:block}
+  .tf .cap{padding:9px 11px;font-size:12.5px;color:#cdd9e5}
+  .tf .cap b{color:var(--txt)}
+
+  .check{list-style:none;padding:0;margin:6px 0}
+  .check li{padding:6px 0 6px 26px;position:relative;font-size:14px}
+  .check li.ok::before{content:"☑";position:absolute;left:0;color:var(--green);font-size:15px}
+  .check li.no::before{content:"☒";position:absolute;left:0;color:var(--red);font-size:15px}
+
+  .sltp{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;text-align:center;margin:8px 0}
+  .sltp div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px}
+  .sltp .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .sltp .v{font-size:15px;font-weight:700;margin-top:3px}
+
+  .grade{border-radius:10px;padding:12px 15px;margin-top:6px;font-size:14px}
+  .gA{background:rgba(32,202,38,.1);border:1px solid rgba(32,202,38,.4)}
+  .gB{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4)}
+  .gC{background:rgba(233,41,41,.1);border:1px solid rgba(233,41,41,.4)}
+  .note{background:rgba(59,130,246,.08);border-left:4px solid var(--blue);border-radius:8px;padding:12px 15px;font-size:14px;color:#cdd9e5;margin-top:12px}
+  .lesson{background:rgba(255,212,71,.08);border-left:4px solid var(--gold);border-radius:8px;padding:12px 15px;font-size:14px;color:#f0e6c8;margin-top:10px}
+  .dummy{border:1px dashed var(--orange);color:var(--orange);font-size:12px;padding:2px 8px;border-radius:6px}
+  .footer{color:var(--muted);font-size:12px;text-align:center;margin-top:36px}
+  code{background:var(--panel2);padding:1px 6px;border-radius:5px;font-size:13px}
+  @media(max-width:680px){.tfs,.sltp{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>📚 Case Library — XAU (Gold)</h1>
+  <p class="sub">Koleksi case entry nyata · SnR + SVP · workflow M15 → M5 → M1 · pendamping <code>ENTRY_PLAYBOOK.html</code></p>
+
+  <div class="note">
+    <b>Cara baca:</b> tiap case = 3 screenshot (M15 bias → M5 trend → M1 eksekusi) + skoring checklist + grade + pelajaran.
+    Case <span class="dummy">DUMMY</span> di bawah cuma contoh <b>format</b> — angka & narasinya karangan, screenshot masih kosong.
+    Ganti dengan case asli kamu.
+  </div>
+
+  <!-- ============ CASE DUMMY ============ -->
+  <div class="case">
+    <div class="case-head">
+      <span class="id">CASE #01</span>
+      <span class="dummy">DUMMY / CONTOH FORMAT</span>
+      <span class="meta">XAUUSD · 14 Jul 2026 · 21:10 WIB (sesi NY)</span>
+      <span class="spacer"></span>
+      <span class="badge win">WIN · BUY</span>
+      <span class="rr">RR&nbsp; <b>1:2.4</b> &nbsp;·&nbsp; +38 poin</span>
+    </div>
+    <div class="case-body">
+
+      <!-- 3 timeframe -->
+      <div class="tfs">
+        <div class="tf m15">
+          <div class="lbl">M15 · BIAS 🧭</div>
+          <div class="shot">[ taruh screenshot M15<br>di sini ]</div>
+          <div class="cap"><b>Bias BUY.</b> Harga di atas value area, mantul <b>VAL</b> yang nempel box support SnR ~4045. pPOC di bawah sudah ke-tap → tidak ada magnet di bawah lagi.</div>
+        </div>
+        <div class="tf m5">
+          <div class="lbl">M5 · TREND 📈</div>
+          <div class="shot">[ taruh screenshot M5<br>di sini ]</div>
+          <div class="cap"><b>Trend naik.</b> Higher-low kebentuk. Harga &gt; EMA200, RSI 58 &amp; slope naik ✔. Zona support M5 ≈ <b>VAL</b> = confluence.</div>
+        </div>
+        <div class="tf m1">
+          <div class="lbl">M1 · ENTRY 🎯</div>
+          <div class="shot">[ taruh screenshot M1<br>di sini ]</div>
+          <div class="cap"><b>Trigger.</b> Retest pertama zona 4045, muncul <b>◆ hijau</b> + candle bullish engulf. Entry saat candle close.</div>
+        </div>
+      </div>
+
+      <!-- Confluence -->
+      <table>
+        <tr><th>Faktor</th><th>Kondisi di chart</th><th>Nilai</th></tr>
+        <tr><td>SnR</td><td>Box support hold + ◆ hijau di 4045</td><td><span class="tag buy">Support hold</span></td></tr>
+        <tr><td>SVP</td><td>Zona itu = <b>VAL</b> (batas bawah value area)</td><td><span class="tag buy">Area BUY</span></td></tr>
+        <tr><td>Confluence</td><td>Box SnR ≈ VAL → <b>nempel</b></td><td><span class="tag poc">Level kuat</span></td></tr>
+        <tr><td>Target</td><td>POC di 4062 sebagai magnet</td><td><span class="tag poc">TP1 = POC</span></td></tr>
+      </table>
+
+      <!-- Checklist scoring -->
+      <b class="tag buy" style="font-size:13px">SKOR CHECKLIST BUY</b>
+      <ul class="check">
+        <li class="ok">M15 bias bullish (di atas / mantul VAL–support)</li>
+        <li class="ok">Confluence: box support SnR ≈ VAL / pVAL / pPOC</li>
+        <li class="ok">M5: harga &gt; EMA200, RSI &gt; 45 &amp; slope naik</li>
+        <li class="ok">M1: ◆ hijau + candle rejection (retest pertama)</li>
+        <li class="ok">RR minimal 1:2 ke target (POC berikutnya)</li>
+        <li class="ok">Sesi London / NY</li>
+      </ul>
+
+      <!-- Levels -->
+      <div class="sltp">
+        <div><div class="k">Entry</div><div class="v">4045.0</div></div>
+        <div><div class="k">Stop Loss</div><div class="v">4029.0</div></div>
+        <div><div class="k">TP1 (POC)</div><div class="v">4062.0</div></div>
+        <div><div class="k">Hasil</div><div class="v" style="color:var(--green)">+38 poin</div></div>
+      </div>
+
+      <div class="grade gA"><b>Grade A</b> — SnR ◆ + level SVP (VAL) + searah bias M15 + rule EMA/RSI lolos. Setup yang diburu, size normal.</div>
+
+      <div class="lesson">
+        🔑 <b>Pelajaran:</b> yang bikin ini kelas A bukan diamond-nya, tapi <b>◆ persis di VAL</b> + pPOC bawah sudah habis
+        (nggak ada tarikan ke bawah). Retest <b>pertama</b> = win-rate tertinggi. Kalau ◆ muncul tapi jauh dari VAL/VAH → turun jadi Grade C, skip.
+      </div>
+
+    </div>
+  </div>
+  <!-- ============ /CASE DUMMY ============ -->
+
+  <p class="footer">Case Library · pendamping Entry Playbook · SnR (SR Fast 7,2,1) + SVP (POC/VAH/VAL)</p>
+
+</div>
+</body>
+</html>

@@ -106,8 +106,33 @@ bool isGold = str.contains(syminfo.ticker, "XAU") or str.contains(syminfo.ticker
 float assetMultiplier = isGold ? 1.2 : 1.0
 box_withd := box_withd * assetMultiplier
 
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙀𝙈𝘼𝟮𝟬𝟬 𝘽𝙄𝘼𝙎 𝙁𝙄𝙇𝙏𝙀𝙍
+// ---------------------------------------------------------------------------------------------------------------------{
+// EMA200 = filter ARAH/bias trend besar. S/R & Volume Profile kasih LEVEL (di mana),
+// EMA200 kasih ARAH (ke mana). Aturannya: BUY hanya saat harga di ATAS EMA200 (bias
+// naik), SELL hanya saat di BAWAH (bias turun). Searah prinsip "M15 DECIDES".
+string grpEma      = "🧭 EMA200 Bias Filter"
+bool   showEma     = input.bool(true, "Show EMA200 Line", group = grpEma)
+bool   useEmaFilter = input.bool(true, "Filter Signals by EMA200 Bias", group = grpEma, tooltip = "✅ ON: sinyal BUY (◆ hijau) hanya muncul saat harga DI ATAS EMA200; sinyal SELL (◆ merah) hanya saat DI BAWAH.\n❌ OFF: tampilkan semua sinyal seperti semula (tanpa filter). Matikan saat market jelas ranging.")
+int    emaLen      = input.int(200, "EMA Length", minval = 1, group = grpEma)
+string emaBiasTF   = input.timeframe("", "Bias Timeframe (kosong = TF chart)", group = grpEma, tooltip = "Kosongkan = EMA200 di TF chart (smooth, tanpa lag).\nIsi '15' agar SELALU pakai bias M15 walau chart di M1/M5 (sesuai aturan 'M15 DECIDES, M5 EXECUTES').\nMode HTF ini NON-REPAINT: pakai bar HTF yang sudah close, jadi angka final & tidak berubah intrabar. Tradeoff: bias telat maks 1 bar HTF, dan garis tampak bertangga di TF kecil.")
+color  emaColor    = input.color(color.new(color.blue, 0), "EMA Color", group = grpEma)
+
+// Non-repaint HTF: ambil nilai EMA200 dari bar HTF yang SUDAH CLOSE ([1] + lookahead_on).
+// Angka yang tampil = angka final, tidak berubah intrabar. Tradeoff: bias telat maks 1 bar HTF.
+string effTF   = emaBiasTF == "" ? timeframe.period : emaBiasTF
+float  emaHTF  = request.security(syminfo.tickerid, effTF, ta.ema(close, emaLen)[1], lookahead = barmerge.lookahead_on)
+float  ema200  = emaBiasTF == "" ? ta.ema(close, emaLen) : emaHTF
+plot(showEma ? ema200 : na, "EMA200 Bias", color = emaColor, linewidth = 2)
+
+// Bias arah — dipakai untuk filter sinyal di bagian bawah.
+// Saat filter OFF, kedua bias = true → sinyal identik dengan versi tanpa filter.
+bool bullBias = not useEmaFilter or close > ema200
+bool bearBias = not useEmaFilter or close < ema200
+
 // Display current settings info
-var table infoTable = table.new(position.top_right, 2, 4)
+var table infoTable = table.new(position.top_right, 2, 5)
 if barstate.islast
     currentTF = timeframe.period
     modeText = autoSettings ? "🔄 AUTO" : "🔧 MANUAL"
@@ -135,6 +160,12 @@ if barstate.islast
     if ruleText != ""
         table.cell(infoTable, 0, 3, ruleText, text_color=color.white, bgcolor=color.new(color.purple, 70), text_size=size.tiny)
         table.cell(infoTable, 1, 3, emojiText, text_color=color.white, bgcolor=color.new(color.purple, 70), text_size=size.tiny)
+
+    // EMA200 bias row
+    biasText  = not useEmaFilter ? "OFF" : close > ema200 ? "▲ BULLISH" : "▼ BEARISH"
+    biasColor = not useEmaFilter ? color.new(color.gray, 50) : close > ema200 ? color.new(color.green, 30) : color.new(color.red, 30)
+    table.cell(infoTable, 0, 4, "EMA200", text_color=color.white, bgcolor=color.new(color.black, 80), text_size=size.tiny)
+    table.cell(infoTable, 1, 4, biasText, text_color=color.white, bgcolor=biasColor, text_size=size.tiny)
 
 
 // ---------------------------------------------------------------------------------------------------------------------}
@@ -294,16 +325,25 @@ switch
 // ---------------------------------------------------------------------------------------------------------------------}
 // 𝙑𝙄𝙎𝙐𝘼𝙇𝙄𝙕𝘼𝙏𝙄𝙊𝙉
 // ---------------------------------------------------------------------------------------------------------------------{
+// Filter sinyal dengan bias EMA200:
+//   BUY (support hold / RBS retest)  hanya tampil saat bullBias (harga di atas EMA200)
+//   SELL (resistance hold / SBR retest) hanya tampil saat bearBias (harga di bawah EMA200)
+// Saat useEmaFilter = OFF, bullBias/bearBias = true → sinyal sama persis versi lama.
+bool sig_res_holds = res_holds and bearBias
+bool sig_sup_holds = sup_holds and bullBias
+bool sig_rbs_buy   = res_is_sup and ta.crossover(low, resistanceLevel)  and bullBias
+bool sig_sbr_sell  = sup_is_res and ta.crossunder(high, supportLevel)   and bearBias
+
 // Plot Res and Sup breakouts and holds
-plotchar(res_holds, "Resistance Holds", "◆", color=#e92929, size=size.tiny, location=location.abovebar, offset=-1)
-plotchar(sup_holds, "Support Holds", "◆", color=#20ca26, size=size.tiny, location=location.belowbar, offset=-1)
+plotchar(sig_res_holds, "Resistance Holds", "◆", color=#e92929, size=size.tiny, location=location.abovebar, offset=-1)
+plotchar(sig_sup_holds, "Support Holds", "◆", color=#20ca26, size=size.tiny, location=location.belowbar, offset=-1)
 
 // RETEST SIGNALS - Diamond appears when price retests broken level
 // RBS: Resistance broken (became support) → price pulls back → bounces from old resistance (now support)
-plotchar(res_is_sup and ta.crossover(low, resistanceLevel), "RBS Retest - BUY", "◆", color=#20ca26, size=size.tiny, location=location.belowbar, offset=-1)
+plotchar(sig_rbs_buy, "RBS Retest - BUY", "◆", color=#20ca26, size=size.tiny, location=location.belowbar, offset=-1)
 
 // SBR: Support broken (became resistance) → price pulls back → rejected from old support (now resistance)
-plotchar(sup_is_res and ta.crossunder(high, supportLevel), "SBR Retest - SELL", "◆", color=#e92929, size=size.tiny, location=location.abovebar, offset=-1)
+plotchar(sig_sbr_sell, "SBR Retest - SELL", "◆", color=#e92929, size=size.tiny, location=location.abovebar, offset=-1)
 
 // Break Out Labels (SBR/RBS with Orange)
 if brekout_sup and not sup_is_res[1]
@@ -320,14 +360,14 @@ if brekout_res and not res_is_sup[1]
 tf_text = timeframe.period
 
 // BREAK & RETEST ALERTS (Most important for scalping)
-alertcondition(res_is_sup and ta.crossover(low, resistanceLevel), title="🟢 RBS RETEST - BUY", message="🎯 [{{ticker}}] {{interval}} | RBS RETEST BUY\n💹 Entry: {{close}}\n⏰ Time: {{time}}\n📊 Old Resistance → Now Support\n✅ HIGH PROBABILITY SETUP")
+alertcondition(sig_rbs_buy, title="🟢 RBS RETEST - BUY", message="🎯 [{{ticker}}] {{interval}} | RBS RETEST BUY\n💹 Entry: {{close}}\n⏰ Time: {{time}}\n📊 Old Resistance → Now Support\n🧭 Searah bias EMA200\n✅ HIGH PROBABILITY SETUP")
 
-alertcondition(sup_is_res and ta.crossunder(high, supportLevel), title="🔴 SBR RETEST - SELL",message="🎯 [{{ticker}}] {{interval}} | SBR RETEST SELL\n📉 Entry: {{close}}\n⏰ Time: {{time}}\n📊 Old Support → Now Resistance\n✅ HIGH PROBABILITY SETUP")
+alertcondition(sig_sbr_sell, title="🔴 SBR RETEST - SELL",message="🎯 [{{ticker}}] {{interval}} | SBR RETEST SELL\n📉 Entry: {{close}}\n⏰ Time: {{time}}\n📊 Old Support → Now Resistance\n🧭 Searah bias EMA200\n✅ HIGH PROBABILITY SETUP")
 
 // First Touch Alerts
-alertcondition(res_holds, title="🔴 Resistance Touch", message="⚠️ [{{ticker}}] {{interval}} | RESISTANCE TOUCH\n📉 Level: {{close}}\n⏰ Time: {{time}}\n📊 Watch for rejection candle\n⚡ Quick scalp opportunity")
+alertcondition(sig_res_holds, title="🔴 Resistance Touch", message="⚠️ [{{ticker}}] {{interval}} | RESISTANCE TOUCH\n📉 Level: {{close}}\n⏰ Time: {{time}}\n📊 Watch for rejection candle\n⚡ Quick scalp opportunity")
 
-alertcondition(sup_holds, title="🟢 Support Touch", message="⚠️ [{{ticker}}] {{interval}} | SUPPORT TOUCH\n💹 Level: {{close}}\n⏰ Time: {{time}}\n📊 Watch for bounce candle\n⚡ Quick scalp opportunity")
+alertcondition(sig_sup_holds, title="🟢 Support Touch", message="⚠️ [{{ticker}}] {{interval}} | SUPPORT TOUCH\n💹 Level: {{close}}\n⏰ Time: {{time}}\n📊 Watch for bounce candle\n⚡ Quick scalp opportunity")
 
 // Breakout Alerts (Wait for retest!)
 alertcondition(brekout_res, title="⬆️ Resistance Break", message="🚨 [{{ticker}}] {{interval}} | RESISTANCE BROKEN\n📈 Price: {{close}}\n⏰ Time: {{time}}\n⏳ WAIT for pullback & retest\n🎯 Potential RBS setup coming")
