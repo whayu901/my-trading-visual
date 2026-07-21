@@ -17,6 +17,7 @@ rsiPeriod      = input.int(14, title="RSI Period",      group="Entry (M1)")
 rsiOB          = input.int(70, title="RSI Overbought",  group="Entry (M1)")
 rsiOS          = input.int(30, title="RSI Oversold",    group="Entry (M1)")
 useMomentumRsi = input.bool(true, title="RSI mode momentum (>50 buy / <50 sell)", group="Entry (M1)", tooltip="ON = konfirmasi arah momentum (lebih ketat, disarankan). OFF = mode lama (cuma hindari overbought/oversold).")
+confirmOnClose = input.bool(true, title="Sinyal hanya saat candle CLOSE (anti-repaint)", group="Entry (M1)", tooltip="ON = sinyal muncul setelah candle M1 close, tidak berubah lagi (aman, disarankan). OFF = sinyal bisa muncul/hilang selama candle berjalan.")
 
 /// === INPUTS: FILTER MULTI-TIMEFRAME ===
 useTrendFilter = input.bool(true, title="Filter TREND (M5)",  group="MTF Filter")
@@ -24,6 +25,16 @@ trendTf        = input.timeframe("5",  title="TF Trend",       group="MTF Filter
 useBiasFilter  = input.bool(true, title="Filter BIAS (M15)",  group="MTF Filter")
 biasTf         = input.timeframe("15", title="TF Bias",        group="MTF Filter")
 biasEmaLen     = input.int(50, title="EMA Bias (M15)",         group="MTF Filter", tooltip="Acuan bias. Close M15 di atas EMA ini = bias BULLISH, di bawah = BEARISH.")
+
+/// === INPUTS: FILTER SESI ===
+useSession = input.bool(true, title="Filter Sesi (jam aktif saja)", group="Session")
+sessTime   = input.session("1400-0400", title="Jam trading", group="Session", tooltip="Default kira-kira London open s/d NY close dalam WIB. Sinyal di luar jam ini dibuang. Sesuaikan dengan jam kamu (mulai 19:00 WIB).")
+sessTz     = input.string("Asia/Jakarta", title="Zona waktu sesi", group="Session", tooltip="Zona waktu acuan jam trading di atas. Default WIB (Asia/Jakarta).")
+
+/// === INPUTS: FILTER VOLATILITAS ===
+useAtrFilter = input.bool(true, title="Filter volatilitas (ATR)", group="Volatility")
+atrLen       = input.int(14, title="ATR Length", group="Volatility")
+atrMult      = input.float(0.7, title="Min. ukuran candle (x ATR)", step=0.1, group="Volatility", tooltip="Candle sinyal harus punya range >= x ATR. Buang candle kecil/market flat yang bikin whipsaw. Naikin = lebih ketat.")
 
 /// === INPUTS: TARGET (TP/SL guide) ===
 showTp            = input.bool(true,  title="Tampilkan garis TP/SL", group="Target")
@@ -61,8 +72,18 @@ passTrendSell = not useTrendFilter or trendDown
 passBiasBuy   = not useBiasFilter  or biasUp
 passBiasSell  = not useBiasFilter  or biasDown
 
-buySignal  = bullishM1 and passTrendBuy  and passBiasBuy
-sellSignal = bearishM1 and passTrendSell and passBiasSell
+// Gate anti-repaint: sinyal hanya saat candle M1 sudah close.
+barOk = not confirmOnClose or barstate.isconfirmed
+
+// Gate sesi: hanya di jam aktif.
+inSession = not useSession or not na(time(timeframe.period, sessTime, sessTz))
+
+// Gate volatilitas: candle sinyal harus cukup besar (buang market flat).
+atrNow = ta.atr(atrLen)
+volOk  = not useAtrFilter or (high - low) >= atrMult * atrNow
+
+buySignal  = bullishM1 and passTrendBuy  and passBiasBuy  and barOk and inSession and volOk
+sellSignal = bearishM1 and passTrendSell and passBiasSell and barOk and inSession and volOk
 
 /// === MARKER SINYAL ===
 plotshape(buySignal,  location=location.belowbar, style=shape.labelup,   text="BUY",  color=color.green, textcolor=color.white, size=size.small)
@@ -90,7 +111,7 @@ if showTp and (buySignal or sellSignal)
     slLine := line.new(bar_index, sl,    bar_index + 10, sl,    color=color.red,   width=1)
 
 /// === DASHBOARD (status MTF sekilas) ===
-var table dash = table.new(position.top_right, 2, 4, border_width=1, frame_color=color.new(color.gray, 50), frame_width=1)
+var table dash = table.new(position.top_right, 2, 5, border_width=1, frame_color=color.new(color.gray, 50), frame_width=1)
 if barstate.islast
     biasTxt  = biasUp ? "BULLISH" : biasDown ? "BEARISH" : "-"
     biasCol  = biasUp ? color.green : biasDown ? color.red : color.gray
@@ -98,8 +119,10 @@ if barstate.islast
     trendCol = trendUp ? color.green : trendDown ? color.red : color.gray
     m1Txt    = emaBull ? "BULL" : "BEAR"
     m1Col    = emaBull ? color.green : color.red
-    alignBuy  = passBiasBuy  and passTrendBuy  and emaBull
-    alignSell = passBiasSell and passTrendSell and not emaBull
+    sessTxt  = inSession ? "AKTIF" : "TUTUP"
+    sessCol  = inSession ? color.green : color.gray
+    alignBuy  = passBiasBuy  and passTrendBuy  and emaBull       and inSession
+    alignSell = passBiasSell and passTrendSell and not emaBull   and inSession
     stateTxt  = alignBuy ? "SIAP BUY" : alignSell ? "SIAP SELL" : "NO TRADE"
     stateCol  = alignBuy ? color.green : alignSell ? color.red : color.new(color.gray, 20)
 
@@ -109,8 +132,10 @@ if barstate.islast
     table.cell(dash, 1, 1, trendTxt,    text_color=color.white, bgcolor=color.new(trendCol, 20),  text_size=size.small)
     table.cell(dash, 0, 2, "M1 EMA",    text_color=color.white, bgcolor=color.new(color.gray, 30), text_size=size.small)
     table.cell(dash, 1, 2, m1Txt,       text_color=color.white, bgcolor=color.new(m1Col, 20),     text_size=size.small)
-    table.cell(dash, 0, 3, "Status",    text_color=color.white, bgcolor=color.new(color.gray, 30), text_size=size.small)
-    table.cell(dash, 1, 3, stateTxt,    text_color=color.white, bgcolor=color.new(stateCol, 10),  text_size=size.small)
+    table.cell(dash, 0, 3, "Sesi",      text_color=color.white, bgcolor=color.new(color.gray, 30), text_size=size.small)
+    table.cell(dash, 1, 3, sessTxt,     text_color=color.white, bgcolor=color.new(sessCol, 20),   text_size=size.small)
+    table.cell(dash, 0, 4, "Status",    text_color=color.white, bgcolor=color.new(color.gray, 30), text_size=size.small)
+    table.cell(dash, 1, 4, stateTxt,    text_color=color.white, bgcolor=color.new(stateCol, 10),  text_size=size.small)
 
 /// === ALERT ===
 alertcondition(buySignal,  title="BUY Signal",  message="BUY {{ticker}} @ {{close}} | M1+M5+M15 align")

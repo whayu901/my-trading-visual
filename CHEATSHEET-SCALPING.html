@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Cheatsheet Scalping — SVP + SnR + proScalper</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1a1a1a; line-height: 1.45; margin: 0; font-size: 12px;
+  }
+  h1 { font-size: 22px; margin: 0 0 2px; color: #0b2a4a; }
+  h2 { font-size: 15px; margin: 18px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #0b2a4a; color: #0b2a4a; }
+  .sub { color: #555; font-style: italic; margin: 0 0 10px; font-size: 11px; }
+  .philo { background:#eef4fb; border-left:4px solid #2563eb; padding:8px 12px; border-radius:4px; margin:8px 0 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 10.5px; }
+  th, td { border: 1px solid #cfd8e3; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #0b2a4a; color: #fff; font-weight: 600; }
+  tr:nth-child(even) td { background: #f5f8fc; }
+  .buy th { background: #157347; }
+  .sell th { background: #b02a37; }
+  .notrade th { background: #555; }
+  .tag { display:inline-block; font-weight:700; padding:1px 6px; border-radius:3px; color:#fff; font-size:10px;}
+  .tag.b{background:#157347;} .tag.s{background:#b02a37;} .tag.n{background:#666;}
+  ol, ul { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin: 2px 0; }
+  pre { background:#0b2a4a; color:#e8f0fa; padding:10px 12px; border-radius:6px;
+        font-family: "SF Mono", Menlo, Consolas, monospace; font-size:10px; line-height:1.5; overflow:hidden; white-space:pre; }
+  .map { background:#f0f4f9; border:1px solid #cfd8e3; border-radius:6px; padding:10px 12px;
+         font-family:"SF Mono",Menlo,Consolas,monospace; font-size:10px; line-height:1.55; white-space:pre; }
+  .rules { counter-reset: r; list-style:none; padding-left:0; }
+  .rules li { counter-increment:r; padding:5px 5px 5px 34px; position:relative; border-bottom:1px dashed #d5deea; }
+  .rules li::before { content: counter(r); position:absolute; left:6px; top:5px; background:#2563eb; color:#fff;
+      width:20px; height:20px; border-radius:50%; text-align:center; line-height:20px; font-weight:700; font-size:11px;}
+  .key { background:#fff7e6; border-left:4px solid #e0a800; padding:6px 10px; border-radius:4px; margin:6px 0; }
+  .footer { margin-top:14px; background:#0b2a4a; color:#e8f0fa; text-align:center; padding:12px; border-radius:6px;
+            font-family:"SF Mono",Menlo,monospace; font-size:11px; line-height:1.7; }
+  .two { display:flex; gap:14px; }
+  .two > div { flex:1; }
+  .avoid { color:#b02a37; }
+  .keep-together { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<h1>🎯 CHEATSHEET SCALPING</h1>
+<p class="sub">SVP + SnR + proScalper &nbsp;|&nbsp; M15 = arah · M5 = konfirmasi · M1 = eksekusi</p>
+
+<div class="philo"><b>Filosofi inti:</b> SnR &amp; SVP = <b>OTAK</b> (di mana entry). proScalper = <b>JARI</b> (kapan pencet). Level dulu, sinyal belakangan.</div>
+
+<h2>⚖️ 5 Aturan Emas</h2>
+<ol class="rules">
+  <li><b>Bias M15 dulu.</b> Bullish → cari BUY saja. Bearish → cari SELL saja. Konflik → DIAM.</li>
+  <li><b>Entry HANYA di level.</b> SnR / VAH / VAL / POC. Di tengah kosong (<i>no man's land</i>) = HARAM entry, walau label nyala.</li>
+  <li><b>Level = titik keputusan, bukan sinyal.</b> Tunggu reaksinya: <b>REJECT (mantul)</b> atau <b>BREAK + RETEST</b>.</li>
+  <li><b>POC = magnet.</b> Selalu jadi target pertama (TP1). Harga cenderung balik ke POC.</li>
+  <li><b>Jangan chase.</b> Momentum udah kebuka lebar &amp; harga jauh dari level = kamu telat. Tunggu retest.</li>
+</ol>
+
+<div class="two keep-together">
+<div>
+<h2>🗺️ Peta Harga (Value Area)</h2>
+<div class="map">  PREMIUM (mahal)    di atas VAH    ← zona JUAL / target BUY
+ ══════════ VAH ══════════   batas atas value
+  UPPER VALUE
+ ────────── POC ──────────   MAGNET (TP1 ke sini)
+  LOWER VALUE
+ ══════════ VAL ══════════   batas bawah value
+  DISCOUNT (murah)   di bawah VAL   ← zona BELI / target SELL</div>
+<p style="font-size:10.5px;margin:4px 0 0;"><b>Confluence:</b> kalau VAH/VAL/POC <b>nyambung dengan zona SnR</b> → level grade-A. Prioritaskan.</p>
+</div>
+<div>
+<h2>🔀 Alur Keputusan</h2>
+<pre>1) M15 Bias?
+   BULLISH → cari BUY
+   BEARISH → cari SELL
+   konflik → DIAM
+
+2) Harga di LEVEL?
+   kosong → DIAM
+   ya → lanjut
+
+3) Reaksi di level?
+   REJECT      → entry arah pantulan
+   BREAK+RETEST→ entry arah break
+   belum jelas → TUNGGU
+
+4) proScalper label + M5 searah
+   + Sesi AKTIF → ENTRY  |  else TUNGGU
+
+5) TP1=POC → TP2=VA edge
+   SL = balik ke level · BE di POC</pre>
+</div>
+</div>
+
+<h2>🟢 Semua Kasus BUY <span style="font-size:11px;font-weight:400;">(syarat: M15 = BULLISH)</span></h2>
+<table class="buy">
+<tr><th>#</th><th>Lokasi harga</th><th>Yang ditunggu</th><th>Entry</th><th>Stop Loss</th><th>Take Profit</th></tr>
+<tr><td><b>B1</b></td><td>Pullback ke <b>VAL</b> (+ support SnR)</td><td>Candle reject/hold di VAL + label BUY</td><td>BUY di VAL</td><td>Bawah VAL / wick</td><td>POC → VAH</td></tr>
+<tr><td><b>B2</b></td><td>Pullback ke <b>POC</b></td><td>Hold di POC + label BUY</td><td>BUY di POC</td><td>Bawah POC / S terdekat</td><td>VAH</td></tr>
+<tr><td><b>B3</b></td><td><b>Break di atas VAH</b></td><td>Close di atas VAH, retest VAH jadi support + BUY</td><td>BUY di retest</td><td>Bawah VAH</td><td>Resist SnR berikutnya</td></tr>
+<tr><td><b>B4</b></td><td><b>Retest RBS</b> (resist jebol → support)</td><td>Balik uji zona flip, hold + BUY</td><td>BUY di zona flip</td><td>Bawah zona flip</td><td>Level SnR berikutnya</td></tr>
+<tr><td><b>B5</b></td><td><b>Discount</b> (bawah VAL) — <i>reversal, agresif</i></td><td>Support SnR kuat + M15 masih bull + rejection + BUY</td><td>BUY (size kecil)</td><td>Bawah support</td><td>POC (jangan serakah)</td></tr>
+</table>
+
+<h2>🔴 Semua Kasus SELL <span style="font-size:11px;font-weight:400;">(syarat: M15 = BEARISH)</span></h2>
+<table class="sell">
+<tr><th>#</th><th>Lokasi harga</th><th>Yang ditunggu</th><th>Entry</th><th>Stop Loss</th><th>Take Profit</th></tr>
+<tr><td><b>S1</b></td><td>Rally ke <b>VAH</b> (+ resist SnR)</td><td>Candle reject/tolak di VAH + label SELL</td><td>SELL di VAH</td><td>Atas VAH / wick</td><td>POC → VAL</td></tr>
+<tr><td><b>S2</b></td><td>Rally ke <b>POC</b></td><td>Tolak di POC + label SELL</td><td>SELL di POC</td><td>Atas POC / R terdekat</td><td>VAL</td></tr>
+<tr><td><b>S3</b></td><td><b>Break di bawah VAL</b></td><td>Close di bawah VAL, retest VAL jadi resist + SELL</td><td>SELL di retest</td><td>Atas VAL</td><td>Support SnR berikutnya</td></tr>
+<tr><td><b>S4</b></td><td><b>Retest SBR</b> (support jebol → resist)</td><td>Balik uji zona flip, tolak + SELL</td><td>SELL di zona flip</td><td>Atas zona flip</td><td>Level SnR berikutnya</td></tr>
+<tr><td><b>S5</b></td><td><b>Premium</b> (atas VAH) — <i>reversal, agresif</i></td><td>Resist SnR kuat + M15 masih bear + rejection + SELL</td><td>SELL (size kecil)</td><td>Atas resist</td><td>POC (jangan serakah)</td></tr>
+</table>
+
+<div class="two">
+<div>
+<h2>⛔ Kapan DIAM (No Trade)</h2>
+<table class="notrade">
+<tr><th>Kondisi</th><th>Kenapa</th></tr>
+<tr><td>Dashboard NO TRADE / M15 vs M5 konflik</td><td>Arah nggak jelas → whipsaw</td></tr>
+<tr><td>Harga di tengah value (jauh dari level)</td><td><i>No man's land</i></td></tr>
+<tr><td>Label lawan bias M15</td><td>Lawan arus institusi</td></tr>
+<tr><td>Sesi = TUTUP</td><td>Likuiditas tipis</td></tr>
+<tr><td>Di level tapi reaksi belum jelas</td><td>Belum reject/break → sabar</td></tr>
+<tr><td>Momentum kebuka lebar, jauh dari level</td><td>Entry telat = kena pantulan</td></tr>
+</table>
+</div>
+<div>
+<h2>📏 Grade Setup</h2>
+<table>
+<tr><th>Grade</th><th>Syarat</th><th>Aksi</th></tr>
+<tr><td><b>A</b></td><td>Bias+Trend align + SVP <b>nyambung</b> SnR + reaksi bersih + label</td><td>Full size</td></tr>
+<tr><td><b>B</b></td><td>Bias align + cuma SVP <i>atau</i> SnR + label</td><td>Size ½</td></tr>
+<tr><td><b>C</b></td><td>Cuma label, level lemah / lawan bias</td><td class="avoid"><b>Skip</b></td></tr>
+</table>
+<h2>💰 Manajemen</h2>
+<ul>
+<li><b>TP1 = POC</b> → amankan sebagian, SL ke <b>breakeven</b>.</li>
+<li><b>TP2 = VA edge</b> (VAH utk BUY, VAL utk SELL) / SnR berikut.</li>
+<li><b>SL selalu di balik level</b> alasan entry.</li>
+<li><b>RR minimal 1 : 1.5.</b> POC kedekatan → skip.</li>
+<li>Loss beruntun → <b>STOP</b>, jangan revenge.</li>
+</ul>
+</div>
+</div>
+
+<h2>🎓 REJECT vs BREAK</h2>
+<div class="two">
+<div>
+<ul>
+<li><b>REJECT (mantul):</b> candle balik arah + wick nolak level → level <b>nahan</b>. Entry searah pantulan (kalau searah bias M15).</li>
+<li><b>BREAK + RETEST:</b> candle <b>close</b> nembus level → tunggu balik nyentuh dari sisi lain (level flip) → entry searah break. <b>Paling aman.</b></li>
+<li><b>Belum jelas:</b> candle masih kebentuk / nggak ada penolakan tegas → <b>TUNGGU</b>.</li>
+</ul>
+</div>
+<div>
+<div class="key">🔑 Jangan <b>SELL di support</b>. SELL setelah support <b>JEBOL &amp; di-RETEST</b>.</div>
+<div class="key">🔑 Jangan <b>BUY di resist</b>. BUY setelah resist <b>JEBOL &amp; di-RETEST</b>.</div>
+</div>
+</div>
+
+<div class="footer">
+M15 = arah &nbsp;·&nbsp; M5 = konfirmasi &nbsp;·&nbsp; M1 = eksekusi<br>
+Level dulu, sinyal belakangan. &nbsp; Sabar = profit.<br>
+Tiap entry disiplin = 1 langkah lebih dekat rumah 1,5 M di Jogja. 🏡
+</div>
+
+</body>
+</html>
