@@ -1,0 +1,117 @@
+//@version=5
+indicator("Pro Scalper Signals", overlay=true)
+
+// ============================================================
+//  ALUR PAKAI (top-down scalper):
+//   M15 = BIAS   (arah institusi)   -> filter Bias
+//   M5  = TREND  (konfirmasi arah)  -> filter Trend
+//   M1  = ENTRY  (eksekusi presisi) -> sinyal EMA cross + RSI
+//  Sinyal BUY/SELL cuma nyala kalau M1 SEARAH M5 & M15.
+//  Semua filter ke timeframe LEBIH TINGGI -> aman di plan FREE.
+// ============================================================
+
+/// === INPUTS: ENTRY (M1) ===
+emaFastLen     = input.int(9,  title="Fast EMA",        group="Entry (M1)")
+emaSlowLen     = input.int(21, title="Slow EMA",        group="Entry (M1)")
+rsiPeriod      = input.int(14, title="RSI Period",      group="Entry (M1)")
+rsiOB          = input.int(70, title="RSI Overbought",  group="Entry (M1)")
+rsiOS          = input.int(30, title="RSI Oversold",    group="Entry (M1)")
+useMomentumRsi = input.bool(true, title="RSI mode momentum (>50 buy / <50 sell)", group="Entry (M1)", tooltip="ON = konfirmasi arah momentum (lebih ketat, disarankan). OFF = mode lama (cuma hindari overbought/oversold).")
+
+/// === INPUTS: FILTER MULTI-TIMEFRAME ===
+useTrendFilter = input.bool(true, title="Filter TREND (M5)",  group="MTF Filter")
+trendTf        = input.timeframe("5",  title="TF Trend",       group="MTF Filter")
+useBiasFilter  = input.bool(true, title="Filter BIAS (M15)",  group="MTF Filter")
+biasTf         = input.timeframe("15", title="TF Bias",        group="MTF Filter")
+biasEmaLen     = input.int(50, title="EMA Bias (M15)",         group="MTF Filter", tooltip="Acuan bias. Close M15 di atas EMA ini = bias BULLISH, di bawah = BEARISH.")
+
+/// === INPUTS: TARGET (TP/SL guide) ===
+showTp            = input.bool(true,  title="Tampilkan garis TP/SL", group="Target")
+takeProfitPercent = input.float(0.3,  title="TP %", step=0.05, group="Target")
+stopLossPercent   = input.float(0.2,  title="SL %", step=0.05, group="Target")
+
+/// === INDIKATOR M1 ===
+emaFast = ta.ema(close, emaFastLen)
+emaSlow = ta.ema(close, emaSlowLen)
+rsi     = ta.rsi(close, rsiPeriod)
+
+rsiBull = useMomentumRsi ? rsi > 50 : rsi < rsiOB
+rsiBear = useMomentumRsi ? rsi < 50 : rsi > rsiOS
+
+crossUp   = ta.crossover(emaFast, emaSlow)
+crossDown = ta.crossunder(emaFast, emaSlow)
+
+bullishM1 = crossUp   and rsiBull
+bearishM1 = crossDown and rsiBear
+
+/// === MTF: TREND (M5) & BIAS (M15) ===
+// lookahead_off = tanpa kebocoran data masa depan (aman, tidak repaint historis).
+[trFast, trSlow] = request.security(syminfo.tickerid, trendTf, [ta.ema(close, emaFastLen), ta.ema(close, emaSlowLen)], lookahead=barmerge.lookahead_off)
+trendUp   = trFast > trSlow
+trendDown = trFast < trSlow
+
+biasEma   = request.security(syminfo.tickerid, biasTf, ta.ema(close, biasEmaLen), lookahead=barmerge.lookahead_off)
+biasClose = request.security(syminfo.tickerid, biasTf, close,                     lookahead=barmerge.lookahead_off)
+biasUp    = biasClose > biasEma
+biasDown  = biasClose < biasEma
+
+// Kalau filter dimatikan -> dianggap lolos.
+passTrendBuy  = not useTrendFilter or trendUp
+passTrendSell = not useTrendFilter or trendDown
+passBiasBuy   = not useBiasFilter  or biasUp
+passBiasSell  = not useBiasFilter  or biasDown
+
+buySignal  = bullishM1 and passTrendBuy  and passBiasBuy
+sellSignal = bearishM1 and passTrendSell and passBiasSell
+
+/// === MARKER SINYAL ===
+plotshape(buySignal,  location=location.belowbar, style=shape.labelup,   text="BUY",  color=color.green, textcolor=color.white, size=size.small)
+plotshape(sellSignal, location=location.abovebar, style=shape.labeldown, text="SELL", color=color.red,   textcolor=color.white, size=size.small)
+
+/// === EMA CLOUD (nuansa biru; transparansi ikut hubungan EMA M1) ===
+emaBull = emaFast > emaSlow
+p1 = plot(emaFast, title="Fast EMA", color=color.new(color.blue, 0))
+p2 = plot(emaSlow, title="Slow EMA", color=color.new(color.blue, 45))
+fill(p1, p2, color = emaBull ? color.new(color.blue, 82) : color.new(color.blue, 92))
+
+/// === GARIS TP/SL (hanya sinyal terakhir, tidak menumpuk) ===
+var line enLine = na
+var line tpLine = na
+var line slLine = na
+if showTp and (buySignal or sellSignal)
+    line.delete(enLine)
+    line.delete(tpLine)
+    line.delete(slLine)
+    entry = close
+    tp = buySignal ? entry * (1 + takeProfitPercent / 100) : entry * (1 - takeProfitPercent / 100)
+    sl = buySignal ? entry * (1 - stopLossPercent   / 100) : entry * (1 + stopLossPercent   / 100)
+    enLine := line.new(bar_index, entry, bar_index + 10, entry, color=color.gray,  style=line.style_dotted)
+    tpLine := line.new(bar_index, tp,    bar_index + 10, tp,    color=color.green, width=1)
+    slLine := line.new(bar_index, sl,    bar_index + 10, sl,    color=color.red,   width=1)
+
+/// === DASHBOARD (status MTF sekilas) ===
+var table dash = table.new(position.top_right, 2, 4, border_width=1, frame_color=color.new(color.gray, 50), frame_width=1)
+if barstate.islast
+    biasTxt  = biasUp ? "BULLISH" : biasDown ? "BEARISH" : "-"
+    biasCol  = biasUp ? color.green : biasDown ? color.red : color.gray
+    trendTxt = trendUp ? "UP" : trendDown ? "DOWN" : "-"
+    trendCol = trendUp ? color.green : trendDown ? color.red : color.gray
+    m1Txt    = emaBull ? "BULL" : "BEAR"
+    m1Col    = emaBull ? color.green : color.red
+    alignBuy  = passBiasBuy  and passTrendBuy  and emaBull
+    alignSell = passBiasSell and passTrendSell and not emaBull
+    stateTxt  = alignBuy ? "SIAP BUY" : alignSell ? "SIAP SELL" : "NO TRADE"
+    stateCol  = alignBuy ? color.green : alignSell ? color.red : color.new(color.gray, 20)
+
+    table.cell(dash, 0, 0, "M15 Bias",  text_color=color.white, bgcolor=color.new(color.gray, 30), text_size=size.small)
+    table.cell(dash, 1, 0, biasTxt,     text_color=color.white, bgcolor=color.new(biasCol, 20),   text_size=size.small)
+    table.cell(dash, 0, 1, "M5 Trend",  text_color=color.white, bgcolor=color.new(color.gray, 30), text_size=size.small)
+    table.cell(dash, 1, 1, trendTxt,    text_color=color.white, bgcolor=color.new(trendCol, 20),  text_size=size.small)
+    table.cell(dash, 0, 2, "M1 EMA",    text_color=color.white, bgcolor=color.new(color.gray, 30), text_size=size.small)
+    table.cell(dash, 1, 2, m1Txt,       text_color=color.white, bgcolor=color.new(m1Col, 20),     text_size=size.small)
+    table.cell(dash, 0, 3, "Status",    text_color=color.white, bgcolor=color.new(color.gray, 30), text_size=size.small)
+    table.cell(dash, 1, 3, stateTxt,    text_color=color.white, bgcolor=color.new(stateCol, 10),  text_size=size.small)
+
+/// === ALERT ===
+alertcondition(buySignal,  title="BUY Signal",  message="BUY {{ticker}} @ {{close}} | M1+M5+M15 align")
+alertcondition(sellSignal, title="SELL Signal", message="SELL {{ticker}} @ {{close}} | M1+M5+M15 align")
