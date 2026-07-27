@@ -53,7 +53,7 @@
 // - Avoid trading during major news events (NFP, FOMC, CPI)
 
 //@version=5
-indicator("SR Fast - AGGRESSIVE Scalping 7,2,1 [Custom]", shorttitle = "SR Fast 7,2,1", overlay=true, max_boxes_count = 50)
+indicator("SR Fast - AGGRESSIVE Scalping 7,2,1 [Custom]", shorttitle = "SR Fast 7,2,1", overlay=true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)
 
 
 // ---------------------------------------------------------------------------------------------------------------------}
@@ -375,4 +375,238 @@ alertcondition(brekout_res, title="⬆️ Resistance Break", message="🚨 [{{ti
 alertcondition(brekout_sup, title="⬇️ Support Break", message="🚨 [{{ticker}}] {{interval}} | SUPPORT BROKEN\n📉 Price: {{close}}\n⏰ Time: {{time}}\n⏳ WAIT for pullback & retest\n🎯 Potential SBR setup coming")
 
 // ◆
+// ---------------------------------------------------------------------------------------------------------------------}
+
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙇𝙄𝙌𝙐𝙄𝘿𝙄𝙏𝙔 𝙎𝙒𝙄𝙉𝙂𝙎  (© LuxAlgo — CC BY-NC-SA 4.0)
+// ---------------------------------------------------------------------------------------------------------------------{
+// Menandai swing high/low sebagai zona LIKUIDITAS (kumpulan stop order retail).
+// Angka pada label = volume yang tertahan di area itu → makin besar = makin banyak
+// likuiditas → makin "menggoda" institusi untuk sweep. Level jadi GARIS PUTUS saat
+// harga menembusnya (likuiditas ter-grab).
+//
+// 🔗 CARA PAKAI BARENG S/R (confluence scalping):
+//   • Swing high (garis merah) nemplok di zona RESISTANCE box → area jual kuat / target sweep.
+//   • Swing low (garis teal) nemplok di zona SUPPORT box       → area beli kuat / target sweep.
+//   • Setelah likuiditas di-sweep (garis jadi putus) lalu balik ke S/R → itu jebakan
+//     (stop hunt) → cari sinyal ◆ untuk entry lawan arah sweep.
+//
+// ⚠️ Intrabar Precision default OFF — plan TradingView FREE tidak support LTF, biarkan mati.
+
+string grpLiq = "💧 Liquidity Swings (LuxAlgo)"
+
+bool   liqEnable      = input.bool(true, "Enable Liquidity Swings", group = grpLiq, tooltip = "Master switch. Matikan kalau chart terlalu ramai atau mau pakai S/R saja.")
+
+// AUTO-ADJUST lookback liquidity per timeframe (mirror sistem S/R).
+// Angkanya sedikit lebih besar dari S/R karena likuiditas = swing yang BENAR-BENAR signifikan
+// (kolam stop order), bukan swing kecil. Makin besar TF → makin besar lookback → pool makin mayor.
+bool   liqAutoLength  = input.bool(true, "🔄 Auto-Adjust Lookback by Timeframe", group = grpLiq, tooltip = "✅ AUTO: lookback nyesuaiin TF\n• M1: 8\n• M5: 12\n• M15: 14\n• M30: 16\n• H1+: 20\n\nMatikan untuk pakai 'Manual Pivot Lookback' di bawah.")
+int    liqLengthManual = input.int(14, 'Manual Pivot Lookback', minval = 1, group = grpLiq, tooltip = "Hanya dipakai saat Auto-Adjust OFF.")
+
+getOptimalLiqLength() =>
+    tf = timeframe.period
+    if tf == "1"
+        8
+    else if tf == "5"
+        12
+    else if tf == "15"
+        14
+    else if tf == "30"
+        16
+    else if timeframe.isintraday == false or timeframe.isdaily
+        20
+    else if tf == "60" or tf == "120" or tf == "240"
+        20
+    else
+        14
+
+int    liqLength      = liqAutoLength ? getOptimalLiqLength() : liqLengthManual
+string liqArea        = input.string('Wick Extremity', 'Swing Area', options = ['Wick Extremity', 'Full Range'], group = grpLiq)
+
+bool   liqIntraPrecision = input.bool(false, 'Intrabar Precision', inline = 'liqintra', group = grpLiq, tooltip = "⚠️ Butuh plan berbayar (akses LTF). Di plan FREE biarkan OFF.")
+string liqIntrabarTf     = input.timeframe('1', ''                , inline = 'liqintra', group = grpLiq)
+
+string liqFilterOptions = input.string('Count', 'Filter Areas By', options = ['Count', 'Volume'], inline = 'liqfilter', group = grpLiq)
+float  liqFilterValue   = input.float(0, ''                                                     , inline = 'liqfilter', group = grpLiq)
+
+bool   liqShowTop     = input.bool(true, 'Swing High'              , inline = 'liqtop', group = grpLiq)
+color  liqTopCss      = input.color(color.red, ''                  , inline = 'liqtop', group = grpLiq)
+color  liqTopAreaCss  = input.color(color.new(color.red, 50), 'Area', inline = 'liqtop', group = grpLiq)
+
+bool   liqShowBtm     = input.bool(true, 'Swing Low'                , inline = 'liqbtm', group = grpLiq)
+color  liqBtmCss      = input.color(color.teal, ''                  , inline = 'liqbtm', group = grpLiq)
+color  liqBtmAreaCss  = input.color(color.new(color.teal, 50), 'Area', inline = 'liqbtm', group = grpLiq)
+
+string liqLabelSize   = input.string('Tiny', 'Labels Size', options = ['Tiny', 'Small', 'Normal'], group = grpLiq)
+
+// Master toggle digabung dengan toggle per-sisi
+bool liqTop = liqShowTop and liqEnable
+bool liqBtm = liqShowBtm and liqEnable
+
+//----- Functions -----
+liq_n = bar_index
+
+liq_get_data()=> [high, low, volume]
+[liq_h, liq_l, liq_v] = request.security_lower_tf(syminfo.tickerid, liqIntrabarTf, liq_get_data())
+
+liq_get_counts(condition, top, btm)=>
+    var count = 0
+    var vol = 0.
+
+    if condition
+        count := 0
+        vol := 0.
+    else
+        if liqIntraPrecision
+            if liq_n > liqLength
+                if array.size(liq_v[liqLength]) > 0
+                    for [index, element] in liq_v[liqLength]
+                        vol += array.get(liq_l[liqLength], index) < top and array.get(liq_h[liqLength], index) > btm ? element : 0
+        else
+            vol += low[liqLength] < top and high[liqLength] > btm ? volume[liqLength] : 0
+
+        count += low[liqLength] < top and high[liqLength] > btm ? 1 : 0
+
+    [count, vol]
+
+liq_set_label(count, vol, x, y, css, lbl_style)=>
+    var label lbl = na
+    var label_size = switch liqLabelSize
+        'Tiny' => size.tiny
+        'Small' => size.small
+        'Normal' => size.normal
+
+    target = switch liqFilterOptions
+        'Count'  => count
+        'Volume' => vol
+
+    if ta.crossover(target, liqFilterValue)
+        lbl := label.new(x, y, str.tostring(vol, format.volume)
+          , style = lbl_style
+          , size = label_size
+          , color = #00000000
+          , textcolor = css)
+
+    if target > liqFilterValue
+        label.set_text(lbl, str.tostring(vol, format.volume))
+
+liq_set_level(condition, crossed, value, count, vol, css)=>
+    var line lvl = na
+
+    target = switch liqFilterOptions
+        'Count'  => count
+        'Volume' => vol
+
+    if condition
+        if target[1] < liqFilterValue[1]
+            line.delete(lvl[1])
+        else if not crossed[1]
+            line.set_x2(lvl, liq_n - liqLength)
+
+        lvl := line.new(liq_n - liqLength, value, liq_n, value
+          , color = na)
+
+    if not crossed[1]
+        line.set_x2(lvl, liq_n+3)
+
+    if crossed and not crossed[1]
+        line.set_x2(lvl, liq_n)
+        line.set_style(lvl, line.style_dashed)
+
+    if target > liqFilterValue
+        line.set_color(lvl, css)
+
+liq_set_zone(condition, x, top, btm, count, vol, css)=>
+    var box bx = na
+
+    target = switch liqFilterOptions
+        'Count'  => count
+        'Volume' => vol
+
+    if ta.crossover(target, liqFilterValue)
+        bx := box.new(x, top, x + count, btm
+          , border_color = na
+          , bgcolor = css)
+
+    if target > liqFilterValue
+        box.set_right(bx, x + count)
+
+//----- Global variables -----
+//Pivot high
+var float liq_ph_top = na
+var float liq_ph_btm = na
+var bool  liq_ph_crossed = na
+var       liq_ph_x1 = 0
+var box   liq_ph_bx = box.new(na,na,na,na
+  , bgcolor = color.new(liqTopAreaCss, 80)
+  , border_color = na)
+
+//Pivot low
+var float liq_pl_top = na
+var float liq_pl_btm = na
+var bool  liq_pl_crossed = na
+var       liq_pl_x1 = 0
+var box   liq_pl_bx = box.new(na,na,na,na
+  , bgcolor = color.new(liqBtmAreaCss, 80)
+  , border_color = na)
+
+//----- Display pivot high levels/blocks -----
+liq_ph = ta.pivothigh(liqLength, liqLength)
+
+[liq_ph_count, liq_ph_vol] = liq_get_counts(liq_ph, liq_ph_top, liq_ph_btm)
+
+if liq_ph and liqTop
+    liq_ph_top := high[liqLength]
+    liq_ph_btm := switch liqArea
+        'Wick Extremity' => math.max(close[liqLength], open[liqLength])
+        'Full Range' => low[liqLength]
+
+    liq_ph_x1 := liq_n - liqLength
+    liq_ph_crossed := false
+
+    box.set_lefttop(liq_ph_bx, liq_ph_x1, liq_ph_top)
+    box.set_rightbottom(liq_ph_bx, liq_ph_x1, liq_ph_btm)
+else
+    liq_ph_crossed := close > liq_ph_top ? true : liq_ph_crossed
+
+    if liq_ph_crossed
+        box.set_right(liq_ph_bx, liq_ph_x1)
+    else
+        box.set_right(liq_ph_bx, liq_n+3)
+
+if liqTop
+    liq_set_zone(liq_ph, liq_ph_x1, liq_ph_top, liq_ph_btm, liq_ph_count, liq_ph_vol, liqTopAreaCss)
+    liq_set_level(liq_ph, liq_ph_crossed, liq_ph_top, liq_ph_count, liq_ph_vol, liqTopCss)
+    liq_set_label(liq_ph_count, liq_ph_vol, liq_ph_x1, liq_ph_top, liqTopCss, label.style_label_down)
+
+//----- Display pivot low levels/blocks -----
+liq_pl = ta.pivotlow(liqLength, liqLength)
+
+[liq_pl_count, liq_pl_vol] = liq_get_counts(liq_pl, liq_pl_top, liq_pl_btm)
+
+if liq_pl and liqBtm
+    liq_pl_top := switch liqArea
+        'Wick Extremity' => math.min(close[liqLength], open[liqLength])
+        'Full Range' => high[liqLength]
+    liq_pl_btm := low[liqLength]
+
+    liq_pl_x1 := liq_n - liqLength
+    liq_pl_crossed := false
+
+    box.set_lefttop(liq_pl_bx, liq_pl_x1, liq_pl_top)
+    box.set_rightbottom(liq_pl_bx, liq_pl_x1, liq_pl_btm)
+else
+    liq_pl_crossed := close < liq_pl_btm ? true : liq_pl_crossed
+
+    if liq_pl_crossed
+        box.set_right(liq_pl_bx, liq_pl_x1)
+    else
+        box.set_right(liq_pl_bx, liq_n+3)
+
+if liqBtm
+    liq_set_zone(liq_pl, liq_pl_x1, liq_pl_top, liq_pl_btm, liq_pl_count, liq_pl_vol, liqBtmAreaCss)
+    liq_set_level(liq_pl, liq_pl_crossed, liq_pl_btm, liq_pl_count, liq_pl_vol, liqBtmCss)
+    liq_set_label(liq_pl_count, liq_pl_vol, liq_pl_x1, liq_pl_btm, liqBtmCss, label.style_label_up)
+
 // ---------------------------------------------------------------------------------------------------------------------}
