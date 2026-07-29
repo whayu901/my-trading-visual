@@ -99,6 +99,31 @@ float confAtrMult = input.float(0.5, "Confluence Tolerance (× ATR)", minval = 0
       tooltip = "Jarak maks LEVEL S/R ke level VP supaya dianggap 'nyambung'. Naikkan untuk lebih banyak trade, turunkan untuk lebih ketat.")
 
 // ---------------------------------------------------------------------------------------------------------------------}
+//  2b) M15 GATING — "M15 DECIDES, M5 EXECUTES"
+// ---------------------------------------------------------------------------------------------------------------------{
+// Semua backtest sebelumnya menguji ◆ M5 TELANJANG — persis hal yang header indikatormu
+// larang ("NEVER trade M5 diamonds alone"). Dua gerbang di bawah menguji aturan itu.
+// Keduanya saklar TERPISAH & default OFF supaya bisa di-A/B satu-satu.
+//
+// ⚠️ NON-REPAINT: nilai HTF diambil dari bar yang SUDAH CLOSE (pakai [1] + lookahead_on),
+// pola yang sama dengan EMA200 di supportAndResistance.pine. Konsekuensinya bias telat
+// maks 1 bar HTF (15 menit). Ini sengaja — matamu lihat M15 bergerak real-time, script
+// menunggu bar tutup. Lebih baik pesimis-jujur daripada optimis-bohong.
+string grpHtf = "④ M15 Gating (HTF)"
+
+bool   useHtfBias  = input.bool(false, "Ⓐ Gerbang ARAH (bias EMA HTF)", group = grpHtf,
+      tooltip = "BUY hanya saat harga di ATAS EMA HTF, SELL hanya saat di BAWAH.\nIni menghidupkan lagi filter EMA200 yang sengaja dibuang di script ini, tapi dipaksa baca dari M15.")
+string htfBiasTF   = input.timeframe("15", "   TF bias", group = grpHtf)
+int    emaLenHtf   = input.int(200, "   EMA Length", minval = 1, group = grpHtf)
+
+bool   useHtfLevel = input.bool(false, "Ⓑ Gerbang LEVEL (S/R dari HTF)", group = grpHtf,
+      tooltip = "Sinyal M5 hanya dieksekusi kalau level S/R pemicunya NEMPEL di level S/R M15.\nMenguji klaim inti: 'M15 diamonds = institutional levels, M5 alone = retail noise'.")
+string htfLevelTF  = input.timeframe("15", "   TF level", group = grpHtf)
+int    htfLookback = input.int(10, "   Lookback HTF", minval = 1, group = grpHtf,
+      tooltip = "Setting optimal M15 menurut tabelmu = 10. Volume filter & box width ikut chart (kebetulan sama-sama 2 dan 1.0 di M5 & M15).")
+float  htfLevelTol = input.float(0.5, "   Toleransi nempel (× ATR)", minval = 0.05, step = 0.05, group = grpHtf)
+
+// ---------------------------------------------------------------------------------------------------------------------}
 //  3) RISK / TRADE MANAGEMENT
 // ---------------------------------------------------------------------------------------------------------------------{
 string grpRisk = "③ Risk Management"
@@ -305,6 +330,35 @@ f_near(float price) =>
 
 bool hasVp = not na(pPoc)
 
+// ---------------------------------------------------------------------------------------------------------------------}
+//  M15 GATING — ambil nilai HTF (non-repaint: bar HTF yang sudah close)
+// ---------------------------------------------------------------------------------------------------------------------{
+// Ⓐ Bias arah
+float emaHtfVal = request.security(syminfo.tickerid, htfBiasTF, ta.ema(close, emaLenHtf)[1], lookahead = barmerge.lookahead_on)
+bool  htfBull   = not useHtfBias or (not na(emaHtfVal) and close > emaHtfVal)
+bool  htfBear   = not useHtfBias or (not na(emaHtfVal) and close < emaHtfVal)
+
+// Ⓑ Level S/R dari HTF — pakai fungsi yang SAMA dgn M5 supaya definisi levelnya konsisten.
+// [1] di dalam wrapper = nilai bar HTF terakhir yang sudah tutup → tidak bocor masa depan.
+f_htfLevels(int lb) =>
+    [s, r, _br, _rh, _sh, _bs] = calcSupportResistance(close, lb)
+    [s[1], r[1]]
+
+[htfSup, htfRes] = request.security(syminfo.tickerid, htfLevelTF, f_htfLevels(htfLookback), lookahead = barmerge.lookahead_on)
+
+// "Nempel" = level M5 pemicu sinyal berjarak <= toleransi dari salah satu level HTF.
+// Sengaja TIDAK diarahkan (support-utk-buy saja), karena flip RBS/SBR bikin level yang
+// dulu resistance kini berfungsi jadi support. Urusan ARAH sudah ditangani gerbang Ⓐ.
+f_htfOk(float price) =>
+    bool ok = not useHtfLevel
+    if useHtfLevel and not na(price)
+        float tol = atrRisk * htfLevelTol
+        if not na(htfSup)
+            ok := ok or math.abs(price - htfSup) <= tol
+        if not na(htfRes)
+            ok := ok or math.abs(price - htfRes) <= tol
+    ok
+
 // Konfluensi dicek pada LEVEL S/R yang jadi ALASAN sinyal (bukan close bar sinyal), dan
 // dievaluasi TERPISAH per aliran karena tiap jenis sinyal punya level acuan berbeda:
 //   • First Touch ▲ (support ditahan)  → supportLevel
@@ -313,10 +367,13 @@ bool hasVp = not na(pPoc)
 //   • Retest SBR ▼  (support→resistance) → supportLevel
 f_pass(bool nearOk) => not requireConf or (hasVp and nearOk)
 
-bool ftLongOK  = ftLongRaw  and f_pass(f_near(supportLevel))
-bool rtLongOK  = rtLongRaw  and f_pass(f_near(resistanceLevel))
-bool ftShortOK = ftShortRaw and f_pass(f_near(resistanceLevel))
-bool rtShortOK = rtShortRaw and f_pass(f_near(supportLevel))
+// Tiap aliran harus lolos: konfluensi SVP + gerbang arah Ⓐ + gerbang level Ⓑ.
+// Level yang dicek ke HTF = level M5 yang jadi ALASAN sinyal (konsisten dgn cara
+// konfluensi SVP dievaluasi), bukan harga close.
+bool ftLongOK  = ftLongRaw  and f_pass(f_near(supportLevel))    and htfBull and f_htfOk(supportLevel)
+bool rtLongOK  = rtLongRaw  and f_pass(f_near(resistanceLevel)) and htfBull and f_htfOk(resistanceLevel)
+bool ftShortOK = ftShortRaw and f_pass(f_near(resistanceLevel)) and htfBear and f_htfOk(resistanceLevel)
+bool rtShortOK = rtShortRaw and f_pass(f_near(supportLevel))    and htfBear and f_htfOk(supportLevel)
 
 // ---------------------------------------------------------------------------------------------------------------------}
 //  TP TARGET — level VP terdekat SEARAH trade
@@ -457,6 +514,11 @@ if useDateFilter and not inDate
 // ---------------------------------------------------------------------------------------------------------------------}
 //  VISUAL — plot level VP + marker sinyal (bantu review manual)
 // ---------------------------------------------------------------------------------------------------------------------{
+// Level M15 yang dipakai gerbang Ⓑ — kalau ON, sinyal harus nempel di salah satu garis ini.
+plot(useHtfLevel ? htfSup : na, "HTF Support",    color = color.new(color.green, 30), linewidth = 2, style = plot.style_linebr)
+plot(useHtfLevel ? htfRes : na, "HTF Resistance", color = color.new(color.red, 30),   linewidth = 2, style = plot.style_linebr)
+plot(useHtfBias  ? emaHtfVal : na, "HTF EMA bias", color = color.new(color.blue, 20), linewidth = 2)
+
 plot(showVpLevels and hasVp ? pPoc : na, "Prev POC", color = color.new(color.fuchsia, 0), linewidth = 2, style = plot.style_linebr)
 plot(showVpLevels and hasVp ? pVah : na, "Prev VAH", color = color.new(color.teal, 0),    linewidth = 1, style = plot.style_linebr)
 plot(showVpLevels and hasVp ? pVal : na, "Prev VAL", color = color.new(color.teal, 0),    linewidth = 1, style = plot.style_linebr)
@@ -525,11 +587,12 @@ if barstate.islast
                 else
                     array.set(cGL, k, array.get(cGL, k) - pr)
 
-    table.cell(st, 0, 0, "SnR + SVP Backtest", text_color = color.white, bgcolor = color.new(color.blue, 40), text_size = size.tiny, text_halign = text.align_left)
-    table.cell(st, 1, 0, "", bgcolor = color.new(color.blue, 40))
-    table.cell(st, 2, 0, "", bgcolor = color.new(color.blue, 40))
-    table.cell(st, 3, 0, "", bgcolor = color.new(color.blue, 40))
-    table.cell(st, 4, 0, requireConf ? "CONF ON" : "CONF OFF", text_color = color.white, bgcolor = color.new(color.blue, 40), text_size = size.tiny, text_halign = text.align_right)
+    color hdrBg = color.new(color.blue, 40)
+    table.cell(st, 0, 0, "SnR + SVP Backtest", text_color = color.white, bgcolor = hdrBg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(st, 1, 0, "", bgcolor = hdrBg)
+    table.cell(st, 2, 0, useHtfBias  ? "Ⓐ BIAS" : "-", text_color = useHtfBias  ? color.yellow : color.gray, bgcolor = hdrBg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 3, 0, useHtfLevel ? "Ⓑ LEVEL" : "-", text_color = useHtfLevel ? color.yellow : color.gray, bgcolor = hdrBg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 4, 0, requireConf ? "CONF ON" : "CONF OFF", text_color = color.white, bgcolor = hdrBg, text_size = size.tiny, text_halign = text.align_right)
 
     f_hdr(0, 1, "Sinyal")
     f_hdr(1, 1, "N")
