@@ -1,0 +1,569 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ChartPrime (SnR base) + midst (SVP base) — Backtest combination by Custom
+//
+// ============================================================================
+//  SnR + SVP CONFLUENCE — BACKTEST STRATEGY (Scalping M5)
+// ============================================================================
+//  Menggabungkan logika 2 indikator live yang sudah dipakai:
+//   1) supportAndResistance.pine  → sinyal ◆ (support holds / resistance holds
+//      / RBS retest BUY / SBR retest SELL), pivot + volume-delta.  TANPA filter EMA200.
+//   2) svp.pine                   → POC / VAH / VAL dari sesi SEBELUMNYA (non-repaint)
+//      dipakai sebagai KONFLUENSI: entry hanya diambil kalau level S/R nyambung
+//      dengan POC/VAH/VAL (level lebih kuat, sesuai metodologi confluence).
+//
+//  ⚠️ CATATAN KEJUJURAN BACKTEST:
+//   • SVP pakai level sesi SEBELUMNYA yang sudah CLOSE → non-repaint (tidak bocor masa depan).
+//   • Sinyal SnR pakai pivot(lookback,lookback) → butuh `lookback` bar ke depan untuk
+//     konfirmasi, tapi entry dieksekusi di bar SETELAH sinyal (realistis, tidak repaint fill).
+//   • Winrate/PF ASLI muncul di panel Strategy Tester + tabel on-chart. Set spread/komisi
+//     broker kamu di input "Commission" & "Slippage" biar hasilnya realistis (XAU spread lebar).
+// ============================================================================
+
+//@version=5
+strategy("SnR + SVP Confluence Backtest [scalping]", shorttitle = "SnR+SVP BT",
+     overlay              = true,
+     initial_capital      = 10000,
+     default_qty_type     = strategy.percent_of_equity,
+     default_qty_value    = 10,
+     commission_type      = strategy.commission.cash_per_order,
+     commission_value     = 0,
+     slippage             = 0,
+     pyramiding           = 0,
+     calc_on_every_tick   = false,
+     process_orders_on_close = false,
+     max_bars_back        = 5000,
+     max_boxes_count      = 500, max_lines_count = 500, max_labels_count = 500)
+
+// ---------------------------------------------------------------------------------------------------------------------}
+//  1) SnR SETTINGS (port dari supportAndResistance.pine — auto per TF)
+// ---------------------------------------------------------------------------------------------------------------------{
+string grpSnr = "① SnR (Support & Resistance)"
+bool autoSettings = input.bool(true, "🔄 Auto-Adjust Settings by Timeframe", group = grpSnr,
+      tooltip = "M1: 5,2,0.6 | M5: 8,2,1.0 | M15: 10,2,1.0 | M30: 12,3,1.2 | H1+: 15,4,1.5")
+
+getOptimalSettings() =>
+    tf = timeframe.period
+    if tf == "1"
+        [5, 2, 0.6]
+    else if tf == "5"
+        [8, 2, 1.0]
+    else if tf == "15"
+        [10, 2, 1.0]
+    else if tf == "30"
+        [12, 3, 1.2]
+    else if timeframe.isintraday == false or timeframe.isdaily
+        [15, 4, 1.5]
+    else
+        [7, 2, 1.0]
+
+[defaultLookback, defaultVolLen, defaultBoxWidth] = getOptimalSettings()
+
+int   manualLookback = input.int(8, "Manual Lookback Period", minval = 1, group = grpSnr)
+int   manualVolLen   = input.int(2, "Manual Volume Filter",   minval = 1, group = grpSnr)
+float manualBoxWidth = input.float(1.0, "Manual Box Width", maxval = 10, minval = 0.1, step = 0.1, group = grpSnr)
+
+int   lookbackPeriod = autoSettings ? defaultLookback   : manualLookback
+int   vol_len        = autoSettings ? defaultVolLen      : manualVolLen
+float box_withd      = autoSettings ? defaultBoxWidth    : manualBoxWidth
+
+// Gold/XAU → zona +20% (auto-detect, sama seperti indikator asli)
+bool  isGold         = str.contains(syminfo.ticker, "XAU") or str.contains(syminfo.ticker, "GOLD")
+float assetMultiplier = isGold ? 1.2 : 1.0
+box_withd := box_withd * assetMultiplier
+
+// Sinyal mana yang di-trade
+string grpSig = "① SnR — Signal Selection"
+bool tradeHolds  = input.bool(true, "Trade 'First Touch' (Support/Resistance Holds ◆)", group = grpSig,
+      tooltip = "Support holds = BUY, Resistance holds = SELL. Ini sinyal paling sering muncul.")
+bool tradeRetest = input.bool(true, "Trade 'Break & Retest' (RBS/SBR ◆)", group = grpSig,
+      tooltip = "RBS retest = BUY, SBR retest = SELL. Lebih jarang tapi biasanya kualitas lebih tinggi.")
+// NB: FILTER EMA200 SENGAJA DIHILANGKAN sesuai permintaan — semua sinyal lolos tanpa bias EMA.
+
+// ---------------------------------------------------------------------------------------------------------------------}
+//  2) SVP SETTINGS (port dari svp.pine — POC/VAH/VAL sesi sebelumnya)
+// ---------------------------------------------------------------------------------------------------------------------{
+string grpSvp = "② SVP (Session Volume Profile)"
+string svpSessionType = input.string("Daily", "Session Basis", options = ["Daily", "Custom"], group = grpSvp,
+      tooltip = "Daily = profil per hari. Custom = pakai jam sesi (mis. London/NY).")
+string svpSession     = input.session("0930-1600", "Custom Session (London/NY)", group = grpSvp)
+int    svpNumRows     = input.int(100, "Number of Rows", minval = 30, maxval = 300, group = grpSvp,
+      tooltip = "Resolusi profil. 100 cukup akurat & ringan untuk backtest.")
+int    svpVA          = input.int(70, "Value Area Volume %", minval = 1, maxval = 100, group = grpSvp)
+bool   showVpLevels   = input.bool(true, "Plot Prev POC/VAH/VAL", group = grpSvp)
+
+// Konfluensi
+string grpConf = "② SVP — Confluence Rule"
+bool  requireConf = input.bool(true, "WAJIB konfluensi dg POC/VAH/VAL", group = grpConf,
+      tooltip = "ON: entry hanya diambil kalau LEVEL S/R pemicu sinyal (support/resistance-nya, bukan harga close) DEKAT salah satu POC/VAH/VAL sesi sebelumnya.\nOFF: trade semua sinyal SnR (buat lihat kontribusi SVP → bandingkan winrate ON vs OFF).")
+float confAtrMult = input.float(0.5, "Confluence Tolerance (× ATR)", minval = 0.05, step = 0.05, group = grpConf,
+      tooltip = "Jarak maks LEVEL S/R ke level VP supaya dianggap 'nyambung'. Naikkan untuk lebih banyak trade, turunkan untuk lebih ketat.")
+
+// ---------------------------------------------------------------------------------------------------------------------}
+//  3) RISK / TRADE MANAGEMENT
+// ---------------------------------------------------------------------------------------------------------------------{
+string grpRisk = "③ Risk Management"
+int   atrLenRisk = input.int(14, "ATR Length (SL/TP)", minval = 1, group = grpRisk)
+float slAtrMult  = input.float(1.5, "Stop Loss (× ATR)", minval = 0.1, step = 0.1, group = grpRisk)
+float rrRatio    = input.float(1.5, "Risk : Reward (TP = SL × RR)", minval = 0.1, step = 0.1, group = grpRisk,
+      tooltip = "Dipakai saat TP Mode = 'Fixed RR', dan sebagai cadangan di mode 'SVP Level'.")
+
+// --- TP MODE: jarak tetap vs level SVP -------------------------------------------------
+// Metodologimu bilang "VAH/VAL bagus untuk target TP, POC sebagai magnet harga". Mode
+// 'SVP Level' menguji klaim itu: TP ditaruh di level VP terdekat SEARAH trade, bukan di
+// kelipatan ATR. SL tetap berbasis ATR.
+string grpTp = "③ TP Mode (uji SVP sbg target)"
+string tpMode = input.string("Fixed RR", "Target TP", options = ["Fixed RR", "SVP Level"], group = grpTp,
+      tooltip = "Fixed RR  : TP = SL × RR (perilaku lama, hasil lama tetap bisa dibandingkan).\nSVP Level : TP = level POC/VAH/VAL terdekat searah trade.")
+bool  tpUseVa  = input.bool(true, "Target: VAH / VAL", group = grpTp)
+bool  tpUsePoc = input.bool(true, "Target: POC",       group = grpTp,
+      tooltip = "Matikan kalau mau uji VAH/VAL saja — POC lebih sering jadi magnet daripada titik balik.")
+float minRRsvp = input.float(0.5, "Min RR utk target SVP", minval = 0.1, step = 0.1, group = grpTp,
+      tooltip = "Kalau level VP terlalu dekat, RR jadi jelek. Di bawah ambang ini trade dianggap tidak layak.\n⚠️ Ini KNOB — jangan diutak-atik sampai hasilnya bagus, itu overfitting.")
+string svpNoTarget = input.string("Skip trade", "Kalau tak ada target valid", options = ["Skip trade", "Pakai Fixed RR"], group = grpTp,
+      tooltip = "Skip trade   : tanpa target VP yang masuk akal → tidak entry (paling setia ke metodologi).\nPakai Fixed RR: tetap entry dgn TP lama (jumlah trade lebih terjaga utk statistik).")
+
+string grpFilter = "③ Entry Filters (opsional)"
+bool  useSessFilter = input.bool(false, "Batasi entry ke jam sesi tertentu", group = grpFilter)
+string tradeSession = input.session("1900-2359", "Trade Session (WIB malam mulai 19:00)", group = grpFilter,
+      tooltip = "Cocokkan dg jam trading malammu. Timezone chart = timezone sesi ini.")
+
+// Date range untuk fokus periode backtest
+string grpDate = "③ Backtest Date Range"
+bool useDateFilter = input.bool(false, "Batasi rentang tanggal", group = grpDate)
+int  startDate = input.time(timestamp("01 Jan 2024 00:00"), "Start", group = grpDate)
+int  endDate   = input.time(timestamp("01 Jan 2027 00:00"), "End",   group = grpDate)
+
+// ---------------------------------------------------------------------------------------------------------------------}
+//  SnR CALCULATION (identik logika indikator, tanpa gambar box)
+// ---------------------------------------------------------------------------------------------------------------------{
+upAndDownVolume() =>
+    var isBuyVolume = true
+    switch
+        close > open => isBuyVolume := true
+        close < open => isBuyVolume := false
+    (isBuyVolume ? volume : -volume)
+
+calcSupportResistance(src, lb) =>
+    Vol    = upAndDownVolume()
+    vol_hi = ta.highest(Vol / 2.5, vol_len)
+    vol_lo = ta.lowest (Vol / 2.5, vol_len)
+
+    var float supportLevel      = na
+    var float supportLevel_1    = na
+    var float resistanceLevel   = na
+    var float resistanceLevel_1 = na
+    var bool  brekout_res       = na
+    var bool  brekout_sup       = na
+    var bool  res_holds         = na
+    var bool  sup_holds         = na
+
+    pivotHigh = ta.pivothigh(src, lb, lb)
+    pivotLow  = ta.pivotlow (src, lb, lb)
+    atr       = ta.atr(200)
+    withd     = atr * box_withd
+
+    if (not na(pivotLow)) and Vol > vol_hi
+        supportLevel   := pivotLow
+        supportLevel_1 := supportLevel - withd
+
+    if (not na(pivotHigh)) and Vol < vol_lo
+        resistanceLevel   := pivotHigh
+        resistanceLevel_1 := resistanceLevel + withd
+
+    brekout_res := ta.crossover (low,  resistanceLevel_1)
+    res_holds   := ta.crossunder(high, resistanceLevel)
+    sup_holds   := ta.crossover (low,  supportLevel)
+    brekout_sup := ta.crossunder(high, supportLevel_1)
+
+    [supportLevel, resistanceLevel, brekout_res, res_holds, sup_holds, brekout_sup]
+
+[supportLevel, resistanceLevel, brekout_res, res_holds, sup_holds, brekout_sup] = calcSupportResistance(close, lookbackPeriod)
+
+// Flip state (RBS / SBR) — sama seperti indikator
+var bool res_is_sup = na
+var bool sup_is_res = na
+switch
+    brekout_res => res_is_sup := true
+    res_holds   => res_is_sup := false
+switch
+    brekout_sup => sup_is_res := true
+    sup_holds   => sup_is_res := false
+
+// SINYAL — TANPA bias EMA200
+bool sig_res_holds = res_holds
+bool sig_sup_holds = sup_holds
+bool sig_rbs_buy   = res_is_sup and ta.crossover (low,  resistanceLevel)
+bool sig_sbr_sell  = sup_is_res and ta.crossunder(high, supportLevel)
+
+// 4 aliran sinyal DIPISAH (bukan digabung jadi rawBuy/rawSell) supaya tiap jenis punya
+// entry ID sendiri → winrate per jenis sinyal kebaca di export & tabel on-chart.
+bool ftLongRaw  = tradeHolds  and sig_sup_holds     // First Touch  : support ditahan
+bool rtLongRaw  = tradeRetest and sig_rbs_buy       // Break&Retest : RBS retest
+bool ftShortRaw = tradeHolds  and sig_res_holds     // First Touch  : resistance ditahan
+bool rtShortRaw = tradeRetest and sig_sbr_sell      // Break&Retest : SBR retest
+
+bool rawBuy  = ftLongRaw  or rtLongRaw
+bool rawSell = ftShortRaw or rtShortRaw
+
+// ---------------------------------------------------------------------------------------------------------------------}
+//  SVP CALCULATION — POC/VAH/VAL sesi SEBELUMNYA (non-repaint, static di sesi berjalan)
+// ---------------------------------------------------------------------------------------------------------------------{
+f_calcProfileLevels(int endOffset, int numBars, float sHigh, float sLow) =>
+    float poc = na
+    float vah = na
+    float val = na
+    float priceRange = sHigh - sLow
+    if priceRange > 0 and numBars > 0
+        float pInterval = priceRange / svpNumRows
+        float[] vols = array.new<float>(svpNumRows, 0.0)
+        for i = endOffset to endOffset + numBars - 1
+            int startRow = int(math.floor((low[i]  - sLow) / pInterval))
+            int endRow   = int(math.floor((high[i] - sLow) / pInterval))
+            startRow := math.max(0, math.min(svpNumRows - 1, startRow))
+            endRow   := math.max(0, math.min(svpNumRows - 1, endRow))
+            int rowsCount = endRow - startRow + 1
+            for j = startRow to endRow
+                float priceLevel    = sLow + pInterval * j
+                float priceLevelTop = sLow + pInterval * (j + 1)
+                float overlapTop    = math.min(high[i], priceLevelTop)
+                float overlapBottom = math.max(low[i], priceLevel)
+                float overlapRange  = math.max(0, overlapTop - overlapBottom)
+                float barRange      = high[i] - low[i]
+                float volToAdd      = barRange > 0 ? volume[i] * (overlapRange / barRange) : volume[i] / rowsCount
+                array.set(vols, j, array.get(vols, j) + volToAdd)
+        float maxVol = array.max(vols)
+        if maxVol > 0
+            int pocIndex = array.indexof(vols, maxVol)
+            poc := sLow + pInterval * (pocIndex + 0.5)
+            float totalVolume  = array.sum(vols)
+            float targetVolume = totalVolume * svpVA / 100
+            int vahIndex = pocIndex
+            int valIndex = pocIndex
+            float acc = array.get(vols, pocIndex)
+            while acc < targetVolume and (vahIndex < svpNumRows - 1 or valIndex > 0)
+                float volumeAbove = vahIndex < svpNumRows - 1 ? array.get(vols, vahIndex + 1) : 0
+                float volumeBelow = valIndex > 0 ? array.get(vols, valIndex - 1) : 0
+                if volumeAbove > volumeBelow and vahIndex < svpNumRows - 1
+                    vahIndex += 1
+                    acc += volumeAbove
+                else if valIndex > 0
+                    valIndex -= 1
+                    acc += volumeBelow
+                else if vahIndex < svpNumRows - 1
+                    vahIndex += 1
+                    acc += volumeAbove
+                else
+                    break
+            vah := sLow + pInterval * (vahIndex + 0.5)
+            val := sLow + pInterval * (valIndex + 0.5)
+    [poc, vah, val]
+
+bool inSess  = svpSessionType == "Custom" ? not na(time(timeframe.period, svpSession)) : true
+bool newSess = svpSessionType == "Custom" ? ta.change(time(timeframe.period, svpSession)) != 0 : ta.change(time("D")) != 0
+
+var float sessionHigh    = na
+var float sessionLow     = na
+var int   sessionStartBar = na
+var float pPoc = na
+var float pVah = na
+var float pVal = na
+
+if newSess and inSess
+    // Sesi baru saja selesai → hitung POC/VAH/VAL-nya sebagai referensi confluence
+    if not na(sessionStartBar) and not na(sessionHigh) and not na(sessionLow)
+        int prevBars = math.min(bar_index - sessionStartBar, 4999)
+        if prevBars > 0
+            [cPoc, cVah, cVal] = f_calcProfileLevels(1, prevBars, sessionHigh, sessionLow)
+            if not na(cPoc)
+                pPoc := cPoc
+                pVah := cVah
+                pVal := cVal
+    sessionHigh    := high
+    sessionLow     := low
+    sessionStartBar := bar_index
+
+if inSess
+    sessionHigh := math.max(sessionHigh, high)
+    sessionLow  := math.min(sessionLow,  low)
+
+// Konfluensi: jarak LEVEL S/R pemicu sinyal ke POC/VAH/VAL <= toleransi
+float atrRisk = ta.atr(atrLenRisk)
+float confTol = atrRisk * confAtrMult
+
+// price = LEVEL S/R yang mau dicek (bukan close). Bisa na di awal chart saat belum ada
+// pivot sama sekali → seluruh cek dilewati dan hasilnya false.
+f_near(float price) =>
+    bool ok = false
+    if not na(price)
+        if not na(pPoc)
+            ok := ok or math.abs(price - pPoc) <= confTol
+        if not na(pVah)
+            ok := ok or math.abs(price - pVah) <= confTol
+        if not na(pVal)
+            ok := ok or math.abs(price - pVal) <= confTol
+    ok
+
+bool hasVp = not na(pPoc)
+
+// Konfluensi dicek pada LEVEL S/R yang jadi ALASAN sinyal (bukan close bar sinyal), dan
+// dievaluasi TERPISAH per aliran karena tiap jenis sinyal punya level acuan berbeda:
+//   • First Touch ▲ (support ditahan)  → supportLevel
+//   • Retest RBS ▲  (resistance→support) → resistanceLevel
+//   • First Touch ▼ (resistance ditahan) → resistanceLevel
+//   • Retest SBR ▼  (support→resistance) → supportLevel
+f_pass(bool nearOk) => not requireConf or (hasVp and nearOk)
+
+bool ftLongOK  = ftLongRaw  and f_pass(f_near(supportLevel))
+bool rtLongOK  = rtLongRaw  and f_pass(f_near(resistanceLevel))
+bool ftShortOK = ftShortRaw and f_pass(f_near(resistanceLevel))
+bool rtShortOK = rtShortRaw and f_pass(f_near(supportLevel))
+
+// ---------------------------------------------------------------------------------------------------------------------}
+//  TP TARGET — level VP terdekat SEARAH trade
+// ---------------------------------------------------------------------------------------------------------------------{
+// Ambil level VP terdekat yang berada DI DEPAN harga (di atas utk long, di bawah utk short).
+// na = tidak ada target yang valid di arah itu.
+f_pickTarget(bool isLong, float px) =>
+    float best = na
+    float bd   = na
+    if tpUsePoc and not na(pPoc) and ((isLong and pPoc > px) or (not isLong and pPoc < px))
+        float dist = math.abs(pPoc - px)
+        if na(bd) or dist < bd
+            best := pPoc
+            bd   := dist
+    if tpUseVa and not na(pVah) and ((isLong and pVah > px) or (not isLong and pVah < px))
+        float dist = math.abs(pVah - px)
+        if na(bd) or dist < bd
+            best := pVah
+            bd   := dist
+    if tpUseVa and not na(pVal) and ((isLong and pVal > px) or (not isLong and pVal < px))
+        float dist = math.abs(pVal - px)
+        if na(bd) or dist < bd
+            best := pVal
+            bd   := dist
+    best
+
+// Kembalikan [hargaTP, rrEfektif, layakEntry].
+// rrEfektif dipakai untuk menghitung baseline entry acak — lihat catatan di tabel.
+f_tpFor(bool isLong, float px, float slDist) =>
+    float tp = na
+    float rr = na
+    bool  ok = true
+    if tpMode == "Fixed RR"
+        tp := isLong ? px + slDist * rrRatio : px - slDist * rrRatio
+        rr := rrRatio
+    else
+        float lvl = f_pickTarget(isLong, px)
+        if not na(lvl)
+            float dist = math.abs(lvl - px)
+            float r    = dist / slDist
+            if r >= minRRsvp
+                tp := lvl
+                rr := r
+            else
+                ok := false
+        else
+            ok := false
+        if not ok and svpNoTarget == "Pakai Fixed RR"
+            tp := isLong ? px + slDist * rrRatio : px - slDist * rrRatio
+            rr := rrRatio
+            ok := true
+    [tp, rr, ok]
+
+// ---------------------------------------------------------------------------------------------------------------------}
+//  ENTRY LOGIC
+// ---------------------------------------------------------------------------------------------------------------------{
+// Entry ID dipisah per jenis sinyal → kolom "Signal" di export CSV/XLSX langsung
+// memberi tahu tiap trade itu First Touch atau Break&Retest, Long atau Short.
+string ID_FT_L = "FT-Long"
+string ID_RT_L = "RT-Long"
+string ID_FT_S = "FT-Short"
+string ID_RT_S = "RT-Short"
+
+bool inDate     = not useDateFilter or (time >= startDate and time <= endDate)
+bool inTradeSes = not useSessFilter or not na(time(timeframe.period, tradeSession))
+bool tradable   = inDate and inTradeSes
+
+// Bar yang memunculkan sinyal 2 arah sekaligus tetap di-skip (sama seperti sebelumnya).
+bool noConflictBuy  = not rawSell
+bool noConflictSell = not rawBuy
+
+bool buyOK  = (ftLongOK  or rtLongOK)  and noConflictBuy  and tradable
+bool sellOK = (ftShortOK or rtShortOK) and noConflictSell and tradable
+
+// SL/TP berbasis ATR (RR configurable)
+//
+// ⚠️ Guard posisi: sinyal SEARAH yang muncul saat posisi masih terbuka DIABAIKAN total.
+// Tanpa guard ini, strategy.entry memang ditolak (pyramiding = 0) TAPI strategy.exit tetap
+// jalan dan menimpa SL/TP posisi yang sudah berjalan dengan level ATR bar baru — trade
+// bisa "pindah" SL/TP diam-diam & hasil backtest jadi tidak mencerminkan rencana awal.
+// Sinyal BERLAWANAN tetap diproses (reversal) seperti sebelumnya.
+bool canEnterLong  = strategy.position_size <= 0
+bool canEnterShort = strategy.position_size >= 0
+
+// SL selalu berbasis ATR; TP tergantung mode. okL/okS = ada target yang layak.
+float slDist = atrRisk * slAtrMult
+float slLong  = close - slDist
+float slShort = close + slDist
+[tpLong,  rrLong,  okLong ] = f_tpFor(true,  close, slDist)
+[tpShort, rrShort, okShort] = f_tpFor(false, close, slDist)
+
+// Kalau First Touch & Retest muncul di bar yang SAMA dan arah sama, RETEST yang diambil
+// (kualitas lebih tinggi menurut catatan indikator). Eksplisit biar deterministik.
+bool takeRtLong  = buyOK  and rtLongOK  and canEnterLong  and okLong
+bool takeFtLong  = buyOK  and ftLongOK  and not rtLongOK  and canEnterLong  and okLong
+bool takeRtShort = sellOK and rtShortOK and canEnterShort and okShort
+bool takeFtShort = sellOK and ftShortOK and not rtShortOK and canEnterShort and okShort
+
+// Sinyal yang benar-benar dieksekusi (dipakai juga untuk marker biar chart == trade list)
+bool tookLong  = takeRtLong  or takeFtLong
+bool tookShort = takeRtShort or takeFtShort
+
+// Akumulasi baseline "entry acak" yang BENAR untuk RR yang bervariasi.
+// Di mode SVP Level tiap trade punya RR sendiri, jadi peluang menang acak = 1/(1+RR_i)
+// dan baseline yang sah adalah RATA-RATA dari itu, bukan 1/(1+RR) tunggal.
+var float sumBaseP = 0.0
+var float sumRR    = 0.0
+var int   nTaken   = 0
+if tookLong
+    sumBaseP += 1.0 / (1.0 + rrLong)
+    sumRR    += rrLong
+    nTaken   += 1
+if tookShort
+    sumBaseP += 1.0 / (1.0 + rrShort)
+    sumRR    += rrShort
+    nTaken   += 1
+
+if takeFtLong
+    strategy.entry(ID_FT_L, strategy.long)
+    strategy.exit(ID_FT_L + "-x", ID_FT_L, stop = slLong, limit = tpLong)
+
+if takeRtLong
+    strategy.entry(ID_RT_L, strategy.long)
+    strategy.exit(ID_RT_L + "-x", ID_RT_L, stop = slLong, limit = tpLong)
+
+if takeFtShort
+    strategy.entry(ID_FT_S, strategy.short)
+    strategy.exit(ID_FT_S + "-x", ID_FT_S, stop = slShort, limit = tpShort)
+
+if takeRtShort
+    strategy.entry(ID_RT_S, strategy.short)
+    strategy.exit(ID_RT_S + "-x", ID_RT_S, stop = slShort, limit = tpShort)
+
+// Tutup semua posisi di luar rentang tanggal (biar stats bersih)
+if useDateFilter and not inDate
+    strategy.close_all(comment = "OutOfRange")
+
+// ---------------------------------------------------------------------------------------------------------------------}
+//  VISUAL — plot level VP + marker sinyal (bantu review manual)
+// ---------------------------------------------------------------------------------------------------------------------{
+plot(showVpLevels and hasVp ? pPoc : na, "Prev POC", color = color.new(color.fuchsia, 0), linewidth = 2, style = plot.style_linebr)
+plot(showVpLevels and hasVp ? pVah : na, "Prev VAH", color = color.new(color.teal, 0),    linewidth = 1, style = plot.style_linebr)
+plot(showVpLevels and hasVp ? pVal : na, "Prev VAL", color = color.new(color.teal, 0),    linewidth = 1, style = plot.style_linebr)
+
+// Diamond = First Touch, Segitiga = Break&Retest. Keduanya hanya untuk trade yang
+// DIEKSEKUSI (cocok 1:1 dengan Strategy Tester trade list).
+plotshape(takeFtLong,  "BUY First Touch",   shape.diamond,     location.belowbar, color.new(#20ca26, 0), size = size.tiny)
+plotshape(takeRtLong,  "BUY Retest (RBS)",  shape.triangleup,  location.belowbar, color.new(#20ca26, 0), size = size.tiny)
+plotshape(takeFtShort, "SELL First Touch",  shape.diamond,     location.abovebar, color.new(#e92929, 0), size = size.tiny)
+plotshape(takeRtShort, "SELL Retest (SBR)", shape.triangledown,location.abovebar, color.new(#e92929, 0), size = size.tiny)
+
+// Silang pudar = sinyal valid tapi DILEWATI — entah karena posisi searah masih terbuka,
+// atau (di mode SVP Level) karena tidak ada target VP yang memenuhi Min RR.
+plotshape(buyOK  and not tookLong,  "BUY (skipped)",  shape.xcross, location.belowbar, color.new(#20ca26, 65), size = size.tiny)
+plotshape(sellOK and not tookShort, "SELL (skipped)", shape.xcross, location.abovebar, color.new(#e92929, 65), size = size.tiny)
+
+// Titik TP yang dipakai saat entry — untuk verifikasi mata bahwa di mode SVP Level
+// TP-nya benar-benar mendarat di garis POC/VAH/VAL, bukan di jarak ATR sembarang.
+plot(tookLong  ? tpLong  : na, "TP target (long)",  color = color.new(color.lime, 0), style = plot.style_cross, linewidth = 2)
+plot(tookShort ? tpShort : na, "TP target (short)", color = color.new(color.red, 0),  style = plot.style_cross, linewidth = 2)
+
+// ---------------------------------------------------------------------------------------------------------------------}
+//  ON-CHART STATS TABLE (winrate, PF, dsb — real dari Strategy Tester engine)
+// ---------------------------------------------------------------------------------------------------------------------{
+// Winrate dibandingkan ke BASELINE ENTRY ACAK, bukan ke 50%. Pada random walk, peluang
+// kena TP duluan = SL/(SL+TP) = 1/(1+RR). Di mode Fixed RR itu satu angka (RR 1.5 → 40%).
+// Di mode SVP Level tiap trade punya RR sendiri, jadi baseline = rata-rata 1/(1+RR_i).
+// ⚠️ Membandingkan winrate mode SVP ke angka 40% adalah SALAH — TP yang lebih dekat
+// menaikkan winrate secara mekanis tanpa ada edge sama sekali. Pakai baris "Entry acak".
+var table st = table.new(position.bottom_right, 5, 10, border_width = 1, frame_color = color.gray, frame_width = 1)
+
+f_hdr(int c, int r, string txt) =>
+    table.cell(st, c, r, txt, text_color = color.silver, bgcolor = color.new(color.black, 40), text_size = size.tiny, text_halign = text.align_right)
+
+f_sigRow(int r, string nm, int n, int w, float gp, float gl, float baseWR) =>
+    float wr  = n > 0 ? 100.0 * w / n : na
+    float pf  = gl > 0 ? gp / gl : na
+    float net = gp - gl
+    color bg  = color.new(color.black, 70)
+    table.cell(st, 0, r, nm, text_color = color.white, bgcolor = bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(st, 1, r, str.tostring(n), text_color = n < 30 ? color.gray : color.white, bgcolor = bg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 2, r, na(wr) ? "-" : str.tostring(wr, "#.#"), text_color = na(wr) ? color.gray : wr >= baseWR ? color.lime : color.orange, bgcolor = bg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 3, r, na(pf) ? "-" : str.tostring(pf, "#.##"), text_color = na(pf) ? color.gray : pf >= 1 ? color.lime : color.red, bgcolor = bg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 4, r, str.tostring(net, "#.#"), text_color = net >= 0 ? color.lime : color.red, bgcolor = bg, text_size = size.tiny, text_halign = text.align_right)
+
+if barstate.islast
+    // Baseline sah untuk campuran RR yang dipakai; jatuh balik ke rumus tunggal kalau kosong.
+    float baseWR = nTaken > 0 ? 100.0 * sumBaseP / nTaken : 100.0 / (1.0 + rrRatio)
+    float avgRR  = nTaken > 0 ? sumRR / nTaken : rrRatio
+
+    string[] ids = array.from(ID_FT_L, ID_RT_L, ID_FT_S, ID_RT_S)
+    int[]    cN  = array.new_int(4, 0)
+    int[]    cW  = array.new_int(4, 0)
+    float[]  cGP = array.new_float(4, 0.0)
+    float[]  cGL = array.new_float(4, 0.0)
+
+    if strategy.closedtrades > 0
+        for i = 0 to strategy.closedtrades - 1
+            int k = array.indexof(ids, strategy.closedtrades.entry_id(i))
+            if k >= 0
+                float pr = strategy.closedtrades.profit(i)
+                array.set(cN, k, array.get(cN, k) + 1)
+                if pr > 0
+                    array.set(cW,  k, array.get(cW,  k) + 1)
+                    array.set(cGP, k, array.get(cGP, k) + pr)
+                else
+                    array.set(cGL, k, array.get(cGL, k) - pr)
+
+    table.cell(st, 0, 0, "SnR + SVP Backtest", text_color = color.white, bgcolor = color.new(color.blue, 40), text_size = size.tiny, text_halign = text.align_left)
+    table.cell(st, 1, 0, "", bgcolor = color.new(color.blue, 40))
+    table.cell(st, 2, 0, "", bgcolor = color.new(color.blue, 40))
+    table.cell(st, 3, 0, "", bgcolor = color.new(color.blue, 40))
+    table.cell(st, 4, 0, requireConf ? "CONF ON" : "CONF OFF", text_color = color.white, bgcolor = color.new(color.blue, 40), text_size = size.tiny, text_halign = text.align_right)
+
+    f_hdr(0, 1, "Sinyal")
+    f_hdr(1, 1, "N")
+    f_hdr(2, 1, "WR%")
+    f_hdr(3, 1, "PF")
+    f_hdr(4, 1, "Net")
+
+    f_sigRow(2, "First Touch ▲", array.get(cN,0), array.get(cW,0), array.get(cGP,0), array.get(cGL,0), baseWR)
+    f_sigRow(3, "Retest RBS ▲",  array.get(cN,1), array.get(cW,1), array.get(cGP,1), array.get(cGL,1), baseWR)
+    f_sigRow(4, "First Touch ▼", array.get(cN,2), array.get(cW,2), array.get(cGP,2), array.get(cGL,2), baseWR)
+    f_sigRow(5, "Retest SBR ▼",  array.get(cN,3), array.get(cW,3), array.get(cGP,3), array.get(cGL,3), baseWR)
+    f_sigRow(6, "TOTAL", strategy.closedtrades, strategy.wintrades, strategy.grossprofit, strategy.grossloss, baseWR)
+
+    // Baris referensi: winrate yang didapat kalau entry ASAL-ASALAN dgn SL/TP yang sama.
+    // Inilah pembanding yang benar — BUKAN 50%, dan bukan 40% kalau RR-nya bervariasi.
+    color refBg = color.new(color.purple, 50)
+    table.cell(st, 0, 7, "Entry acak (ref)", text_color = color.white, bgcolor = refBg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(st, 1, 7, "-", text_color = color.white, bgcolor = refBg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 2, 7, str.tostring(baseWR, "#.#"), text_color = color.white, bgcolor = refBg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 3, 7, "1.00", text_color = color.white, bgcolor = refBg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 4, 7, "0", text_color = color.white, bgcolor = refBg, text_size = size.tiny, text_halign = text.align_right)
+
+    // Mode TP + RR rata-rata yang benar-benar terpakai (di mode SVP ini bervariasi per trade).
+    color bg8 = color.new(color.black, 70)
+    table.cell(st, 0, 8, "TP: " + (tpMode == "Fixed RR" ? "Fixed RR" : "SVP Level"), text_color = color.aqua, bgcolor = bg8, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(st, 1, 8, str.tostring(nTaken), text_color = color.white, bgcolor = bg8, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 2, 8, "RR~", text_color = color.silver, bgcolor = bg8, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 3, 8, str.tostring(avgRR, "#.##"), text_color = color.white, bgcolor = bg8, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 4, 8, "", bgcolor = bg8)
+
+    float expectancy = strategy.closedtrades > 0 ? strategy.netprofit / strategy.closedtrades : na
+    color bg9 = color.new(color.black, 70)
+    table.cell(st, 0, 9, "Exp/trade | MaxDD", text_color = color.white, bgcolor = bg9, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(st, 1, 9, "", bgcolor = bg9)
+    table.cell(st, 2, 9, na(expectancy) ? "-" : str.tostring(expectancy, "#.##"), text_color = na(expectancy) ? color.gray : expectancy >= 0 ? color.lime : color.red, bgcolor = bg9, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(st, 3, 9, "", bgcolor = bg9)
+    table.cell(st, 4, 9, str.tostring(strategy.max_drawdown, "#.#"), text_color = color.orange, bgcolor = bg9, text_size = size.tiny, text_halign = text.align_right)
