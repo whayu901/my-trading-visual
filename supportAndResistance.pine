@@ -113,8 +113,8 @@ box_withd := box_withd * assetMultiplier
 // EMA200 kasih ARAH (ke mana). Aturannya: BUY hanya saat harga di ATAS EMA200 (bias
 // naik), SELL hanya saat di BAWAH (bias turun). Searah prinsip "M15 DECIDES".
 //
-// Dihapus 13 Agu 2026, DIKEMBALIKAN 19 Agu 2026 atas permintaan user.
-// Nilainya BUKAN dari statistik — backtest 13 Agu: 53,8% win vs baseline acak 50%,
+// Dihapus lalu DIKEMBALIKAN atas permintaan user pada 31 Agu 2026 (sesi yang sama).
+// Nilainya BUKAN dari statistik — backtest 31 Agu: 53,8% win vs baseline acak 50%,
 // CI95 memuat nol, paruh-1/paruh-2 tidak konsisten => NETRAL, bukan terbukti unggul.
 // Nilainya dari efek praktis: membuang ~77% sinyal, sehingga tidak ada ◆ hijau saat
 // harga jelas di bawah EMA200 (anti nangkap pisau jatuh) dan jumlah trade per malam
@@ -150,7 +150,7 @@ bool bearBias = not useEmaFilter or close < ema200
 // Matikan toggle-nya → chart & sinyal kembali identik dengan versi sebelumnya.
 //
 // KENAPA CUMA GARIS, BUKAN FILTER SINYAL?
-// Diuji 13 Agu 2026 di data sendiri (XAU M5, 5.717 bar, 11 Mei–9 Jun 2026):
+// Diuji 31 Agu 2026 di data sendiri (XAU M5, 5.717 bar, 11 Mei–9 Jun 2026):
 //   • MA cross polos (10/21 & 9/21) sebagai pemicu entry: E[R] −0.014, PF 0.98.
 //     Sebelum biaya +0.046, sesudah spread $0.30 jadi negatif. Biaya > edge.
 //   • MA searah sebagai GERBANG sinyal S/R: buang 93,6% sinyal, sisanya tetap rugi.
