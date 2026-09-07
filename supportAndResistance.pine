@@ -107,35 +107,50 @@ float assetMultiplier = isGold ? 1.2 : 1.0
 box_withd := box_withd * assetMultiplier
 
 // ---------------------------------------------------------------------------------------------------------------------}
-// 𝙀𝙈𝘼𝟮𝟬𝟬 𝘽𝙄𝘼𝙎 𝙁𝙄𝙇𝙏𝙀𝙍
+// 𝙈𝘼𝟮𝟬𝟬 𝘽𝙄𝘼𝙎 𝙁𝙄𝙇𝙏𝙀𝙍
 // ---------------------------------------------------------------------------------------------------------------------{
-// EMA200 = filter ARAH/bias trend besar. S/R & Volume Profile kasih LEVEL (di mana),
-// EMA200 kasih ARAH (ke mana). Aturannya: BUY hanya saat harga di ATAS EMA200 (bias
+// MA200 = filter ARAH/bias trend besar. S/R & Volume Profile kasih LEVEL (di mana),
+// MA200 kasih ARAH (ke mana). Aturannya: BUY hanya saat harga di ATAS MA200 (bias
 // naik), SELL hanya saat di BAWAH (bias turun). Searah prinsip "M15 DECIDES".
+// Tipe garis (EMA/SMA) bisa dipilih lewat input "Tipe MA200" — lihat tooltip-nya
+// untuk angka pembanding hasil pengukuran 7 Sep 2026.
 //
 // Dihapus lalu DIKEMBALIKAN atas permintaan user pada 31 Agu 2026 (sesi yang sama).
 // Nilainya BUKAN dari statistik — backtest 31 Agu: 53,8% win vs baseline acak 50%,
 // CI95 memuat nol, paruh-1/paruh-2 tidak konsisten => NETRAL, bukan terbukti unggul.
 // Nilainya dari efek praktis: membuang ~77% sinyal, sehingga tidak ada ◆ hijau saat
-// harga jelas di bawah EMA200 (anti nangkap pisau jatuh) dan jumlah trade per malam
+// harga jelas di bawah MA200 (anti nangkap pisau jatuh) dan jumlah trade per malam
 // turun drastis => lebih sedikit spread dibayar, lebih sedikit overtrading.
 //
 // ⚠️ WARNA: sengaja CYAN + garis TEBAL supaya tidak tertukar dengan MA 10/21 di blok
 // berikutnya (oranye & ungu, garis tipis). Tiga garis di chart harus beda sekilas.
-string grpEma      = "🧭 EMA200 Bias Filter"
-bool   showEma     = input.bool(true, "Show EMA200 Line", group = grpEma)
-bool   useEmaFilter = input.bool(true, "Filter Signals by EMA200 Bias", group = grpEma, tooltip = "✅ ON: sinyal BUY (◆ hijau) hanya muncul saat harga DI ATAS EMA200; sinyal SELL (◆ merah) hanya saat DI BAWAH.\n❌ OFF: tampilkan semua sinyal seperti semula (tanpa filter). Matikan saat market jelas ranging.")
-int    emaLen      = input.int(200, "EMA Length", minval = 1, group = grpEma)
-string emaBiasTF   = input.timeframe("", "Bias Timeframe (kosong = TF chart)", group = grpEma, tooltip = "Kosongkan = EMA200 di TF chart (smooth, tanpa lag).\nIsi '15' agar SELALU pakai bias M15 walau chart di M1/M5 (sesuai aturan 'M15 DECIDES, M5 EXECUTES').\nMode HTF ini NON-REPAINT: pakai bar HTF yang sudah close, jadi angka final & tidak berubah intrabar. Tradeoff: bias telat maks 1 bar HTF, dan garis tampak bertangga di TF kecil.")
-color  emaColor    = input.color(#00bcd4, "EMA Color", group = grpEma)
-int    emaWidth    = input.int(3, "Tebal Garis EMA200", minval = 1, maxval = 5, group = grpEma, tooltip = "Sengaja lebih tebal dari MA 10/21 biar gampang dibedain sekilas.")
+string grpEma      = "🧭 MA200 Bias Filter"
+bool   showEma     = input.bool(true, "Show MA200 Line", group = grpEma)
+bool   useEmaFilter = input.bool(true, "Filter Signals by MA200 Bias", group = grpEma, tooltip = "✅ ON: sinyal BUY (◆ hijau) hanya muncul saat harga DI ATAS MA200; sinyal SELL (◆ merah) hanya saat DI BAWAH.\n❌ OFF: tampilkan semua sinyal seperti semula (tanpa filter). Matikan saat market jelas ranging.")
+string emaType     = input.string("EMA", "Tipe MA200", options = ["EMA", "SMA"], group = grpEma,
+      tooltip = "Diukur di XAU M5 (5.717 bar): EMA vs SMA di panjang 200 memberi bias yang SAMA 94% waktu, jumlah whipsaw nyaris identik (258x vs 254x), dan SMA cuma telat ~2 bar saat ganti arah.\n\nSebabnya: Pine memakai alpha=2/(len+1), yang titik beratnya SAMA PERSIS dengan SMA (99,5 bar). Jadi EMA200 TIDAK lebih cepat dari SMA200 — mitos.\n\nBeda nyatanya: SMA bisa bergerak walau harga diam, karena bar ke-201 keluar dari jendela (terukur 1,05x lebih besar di bar sepi, terjadi 54% waktu). EMA tidak punya artefak ini.\n\nDefault EMA. Ganti ke SMA kalau mau menyamakan dengan setup MT5.")
+int    emaLen      = input.int(200, "Panjang MA200", minval = 1, group = grpEma)
+string emaBiasTF   = input.timeframe("", "Bias Timeframe (kosong = TF chart)", group = grpEma, tooltip = "Kosongkan = MA200 di TF chart (smooth, tanpa lag).\nIsi '15' agar SELALU pakai bias M15 walau chart di M1/M5 (sesuai aturan 'M15 DECIDES, M5 EXECUTES').\nMode HTF ini NON-REPAINT: pakai bar HTF yang sudah close, jadi angka final & tidak berubah intrabar. Tradeoff: bias telat maks 1 bar HTF, dan garis tampak bertangga di TF kecil.")
+color  emaColor    = input.color(#00bcd4, "Warna MA200", group = grpEma)
+int    emaWidth    = input.int(3, "Tebal Garis MA200", minval = 1, maxval = 5, group = grpEma, tooltip = "Sengaja lebih tebal dari MA 10/21 biar gampang dibedain sekilas.")
 
-// Non-repaint HTF: ambil nilai EMA200 dari bar HTF yang SUDAH CLOSE ([1] + lookahead_on).
+// Kedua MA sengaja dihitung SETIAP bar lalu baru dipilih. Kalau ta.* ditaruh langsung
+// di dalam cabang kondisional, fungsinya tidak dipanggil tiap bar dan state internal
+// EMA (yang rekursif) bisa meleset diam-diam. Pola aman standar Pine.
+// Argumen `shift` dipakai supaya operator [1] jatuh pada VARIABEL lokal, bukan pada
+// hasil pemanggilan fungsi — menghindari zona abu-abu history-referencing di Pine.
+maBias200(src, len, shift) =>
+    float _e = ta.ema(src, len)
+    float _s = ta.sma(src, len)
+    float _v = emaType == "SMA" ? _s : _e
+    shift ? _v[1] : _v
+
+// Non-repaint HTF: ambil nilai MA200 dari bar HTF yang SUDAH CLOSE (shift + lookahead_on).
 // Angka yang tampil = angka final, tidak berubah intrabar. Tradeoff: bias telat maks 1 bar HTF.
 string effTF   = emaBiasTF == "" ? timeframe.period : emaBiasTF
-float  emaHTF  = request.security(syminfo.tickerid, effTF, ta.ema(close, emaLen)[1], lookahead = barmerge.lookahead_on)
-float  ema200  = emaBiasTF == "" ? ta.ema(close, emaLen) : emaHTF
-plot(showEma ? ema200 : na, "EMA200 Bias", color = emaColor, linewidth = emaWidth)
+float  emaHTF  = request.security(syminfo.tickerid, effTF, maBias200(close, emaLen, true), lookahead = barmerge.lookahead_on)
+float  ema200  = emaBiasTF == "" ? maBias200(close, emaLen, false) : emaHTF
+plot(showEma ? ema200 : na, "MA200 Bias", color = emaColor, linewidth = emaWidth)
 
 // Bias arah — dipakai untuk filter sinyal di bagian bawah.
 // Saat filter OFF, kedua bias = true → sinyal identik dengan versi tanpa filter.
@@ -159,12 +174,12 @@ bool bearBias = not useEmaFilter or close < ema200
 //     situ). Entry pantulan = beli kelemahan; MA cross = beli kekuatan. Bertentangan.
 // Jadi MA di sini berguna sebagai KONTEKS MATA (arah & momentum sekilas),
 // BUKAN alasan entry. Jangan sambungkan maFast/maSlow ke sig_* di bagian bawah —
-// Filter arah di script ini HANYA EMA200 (blok di atas). MA 10/21 murni gambar.
+// Filter arah di script ini HANYA MA200 (blok di atas). MA 10/21 murni gambar.
 string grpMa    = "📈 Moving Average (visual)"
 bool   maShow   = input.bool(true, "Tampilkan MA", group = grpMa,
       tooltip = "Garis bantu arah tren. TIDAK mempengaruhi sinyal ◆ sama sekali.\nMatikan → tampilan balik seperti versi lama.")
 string maType   = input.string("EMA", "Tipe MA", options = ["EMA", "SMA", "WMA"], group = grpMa)
-int    maFastLen = input.int(10, "MA Cepat", minval = 1, group = grpMa)
+int    maFastLen = input.int(13, "MA Cepat", minval = 1, group = grpMa)
 int    maSlowLen = input.int(21, "MA Lambat", minval = 1, group = grpMa)
 color  maFastCol = input.color(color.new(#f39c12, 0), "Warna MA Cepat", inline = "mac", group = grpMa)
 color  maSlowCol = input.color(color.new(#8e44ad, 0), "Warna MA Lambat", inline = "mac", group = grpMa)
@@ -228,10 +243,10 @@ if barstate.islast
         table.cell(infoTable, 0, 3, ruleText, text_color=color.white, bgcolor=color.new(color.purple, 70), text_size=size.tiny)
         table.cell(infoTable, 1, 3, emojiText, text_color=color.white, bgcolor=color.new(color.purple, 70), text_size=size.tiny)
 
-    // EMA200 bias row
+    // MA200 bias row (label ikut tipe yang dipilih: EMA200 / SMA200)
     biasText  = not useEmaFilter ? "OFF" : close > ema200 ? "▲ BULLISH" : "▼ BEARISH"
     biasColor = not useEmaFilter ? color.new(color.gray, 50) : close > ema200 ? color.new(color.green, 30) : color.new(color.red, 30)
-    table.cell(infoTable, 0, 4, "EMA200", text_color=color.white, bgcolor=color.new(color.black, 80), text_size=size.tiny)
+    table.cell(infoTable, 0, 4, emaType + "200", text_color=color.white, bgcolor=color.new(color.black, 80), text_size=size.tiny)
     table.cell(infoTable, 1, 4, biasText, text_color=color.white, bgcolor=biasColor, text_size=size.tiny)
 
 
@@ -392,9 +407,9 @@ switch
 // ---------------------------------------------------------------------------------------------------------------------}
 // 𝙑𝙄𝙎𝙐𝘼𝙇𝙄𝙕𝘼𝙏𝙄𝙊𝙉
 // ---------------------------------------------------------------------------------------------------------------------{
-// Filter sinyal dengan bias EMA200:
-//   BUY (support hold / RBS retest)  hanya tampil saat bullBias (harga di atas EMA200)
-//   SELL (resistance hold / SBR retest) hanya tampil saat bearBias (harga di bawah EMA200)
+// Filter sinyal dengan bias MA200:
+//   BUY (support hold / RBS retest)  hanya tampil saat bullBias (harga di atas MA200)
+//   SELL (resistance hold / SBR retest) hanya tampil saat bearBias (harga di bawah MA200)
 // Saat useEmaFilter = OFF, bullBias/bearBias = true → sinyal sama persis versi tanpa filter.
 bool sig_res_holds = res_holds and bearBias
 bool sig_sup_holds = sup_holds and bullBias
@@ -427,9 +442,9 @@ if brekout_res and not res_is_sup[1]
 tf_text = timeframe.period
 
 // BREAK & RETEST ALERTS (Most important for scalping)
-alertcondition(sig_rbs_buy, title="🟢 RBS RETEST - BUY", message="🎯 [{{ticker}}] {{interval}} | RBS RETEST BUY\n💹 Entry: {{close}}\n⏰ Time: {{time}}\n📊 Old Resistance → Now Support\n🧭 Searah bias EMA200 (saat filter ON)\n✅ HIGH PROBABILITY SETUP")
+alertcondition(sig_rbs_buy, title="🟢 RBS RETEST - BUY", message="🎯 [{{ticker}}] {{interval}} | RBS RETEST BUY\n💹 Entry: {{close}}\n⏰ Time: {{time}}\n📊 Old Resistance → Now Support\n🧭 Searah bias MA200 (saat filter ON)\n✅ HIGH PROBABILITY SETUP")
 
-alertcondition(sig_sbr_sell, title="🔴 SBR RETEST - SELL",message="🎯 [{{ticker}}] {{interval}} | SBR RETEST SELL\n📉 Entry: {{close}}\n⏰ Time: {{time}}\n📊 Old Support → Now Resistance\n🧭 Searah bias EMA200 (saat filter ON)\n✅ HIGH PROBABILITY SETUP")
+alertcondition(sig_sbr_sell, title="🔴 SBR RETEST - SELL",message="🎯 [{{ticker}}] {{interval}} | SBR RETEST SELL\n📉 Entry: {{close}}\n⏰ Time: {{time}}\n📊 Old Support → Now Resistance\n🧭 Searah bias MA200 (saat filter ON)\n✅ HIGH PROBABILITY SETUP")
 
 // First Touch Alerts
 alertcondition(sig_res_holds, title="🔴 Resistance Touch", message="⚠️ [{{ticker}}] {{interval}} | RESISTANCE TOUCH\n📉 Level: {{close}}\n⏰ Time: {{time}}\n📊 Watch for rejection candle\n⚡ Quick scalp opportunity")
